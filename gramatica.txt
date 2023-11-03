@@ -1,5 +1,13 @@
-G1 = ({P, Y}, {0,1}, {P -> 0P1 | lambda, Y -> 0Y1 | lambda}, {P})
+G1 = ({S, A, B}, {a, b}, {S -> ASA | aB, A -> B | S, B -> b | lambda}, {S})
 0101
 0000
 0
 1
+
+S → ASA | aB
+A → B | S
+B → b | lambda
+
+S -> ASA| aB | a | SA | AS | S
+A -> B | S
+B - > b

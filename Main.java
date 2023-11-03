@@ -12,6 +12,8 @@ import java.io.IOException;
 class Main {
     public static void main(String[] args) throws IOException {
         GrammarExtractor grammarExtractor = new GrammarExtractor();
+        GrammarConversor grammarConversor = new GrammarConversor();
+
         String nome_arquivo = "gramatica.txt"; // Substitua pelo nome do arquivo que deseja ler
         BufferedReader bf = new BufferedReader(new FileReader(nome_arquivo));
 
@@ -27,5 +29,6 @@ class Main {
         bf.close();
 
         grammar.PrintGrammar();
+        grammarConversor.RemoveLambdaRules(grammar);
     }
 }

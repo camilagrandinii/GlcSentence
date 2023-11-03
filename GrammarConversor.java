@@ -43,54 +43,55 @@ public class GrammarConversor {
         return anulaveis;
     } 
 
-    public List<VariableRules> eliminarRegrasLambda(List<VariableRules> grammar, List<String> anulaveis) {
-        List<VariableRules> variableRulesList = new ArrayList<>(grammar);
-
-        // 1. Remova as regras lambda originais (do tipo A -> λ).
-        List<String> rulesList = new ArrayList<String>();
-
-        for (VariableRules variableRules : variableRulesList) {
-            rulesList = variableRules.getSubstitutionRules();
+    public List<VariableRules> eliminarRegrasLambda(List<VariableRules> variableRulesList, List<String> anulaveis) {
+        List<VariableRules> variableRulesListAux = new ArrayList<>(variableRulesList);
         
-            int index = getVariableRuleIndex(variableRules.variable, variableRulesList);
-                
+        // 1. Remova as regras lambda originais (do tipo A -> λ).
+        for (VariableRules variableRules : variableRulesListAux) {
+            List<String> rulesList = variableRules.getSubstitutionRules();
+            
+            int index = getVariableRuleIndex(variableRules.variable, variableRulesListAux);
+            
             if (index != -1) {
                 List<String> filteredRules = rulesList.stream()
-                    .filter(rule -> !rule.equals("lambda"))
-                    .collect(Collectors.toList());
-        
-                variableRulesList.get(index).setSubstitutionRules(filteredRules);
+                .filter(rule -> !rule.equals("lambda"))
+                .collect(Collectors.toList());
+                
+                variableRulesListAux.get(index).setSubstitutionRules(filteredRules);
             }
         }
         
+        List<VariableRules> variableRulesListCombinationAux = new ArrayList<>(variableRulesListAux);
 
         // 2. Para cada variável anulável (A), faça as substituições apropriadas nas regras.
         for (String variavelAnulavel : anulaveis) {
             List<VariableRules> regrasComVariavelAnulavel = new ArrayList<>();
-
+    
             // Encontre as regras que contêm a variável anulável.
-            for (VariableRules rule : variableRulesList) {
-                if (containsVariable(rule.getSubstitutionRules(), variavelAnulavel)) {
+            for (VariableRules rule : variableRulesListAux) {
+                if (rulesListcontainsVariable(rule.getSubstitutionRules(), variavelAnulavel)) {
                     regrasComVariavelAnulavel.add(rule);
                 }
             }
-
+    
             // Gere novas regras com a variável anulável substituída.
             for (VariableRules variable : regrasComVariavelAnulavel) {
-                for (String originalRule : variable.getSubstitutionRules()) {   
-
+                List<String> substitutionRules = variable.getSubstitutionRules();
+    
+                for (String originalRule : substitutionRules) {
                     List<String> combinacoes = gerarCombinacoes(originalRule, anulaveis);
-                                        
+    
                     if (!combinacoes.isEmpty()) {
-                        int index = getVariableRuleIndex(variable.variable, variableRulesList);
-                        variableRulesList.get(index).setRules(combinacoes);
-                    }                    
+                        int index = getVariableRuleIndex(variable.variable, variableRulesListAux);
+                        variableRulesListCombinationAux.get(index).setSubstitutionRules(combinacoes);
+                    }
                 }
             }
         }
-
-        return variableRulesList;
+    
+        return variableRulesListCombinationAux;
     }
+    
 
     /*
      * 
@@ -145,7 +146,19 @@ public class GrammarConversor {
         return index;
     }
 
-    private boolean containsVariable(List<String> rulesList, String variable) {
+    private boolean ruleContainsVariable(String rule, String variable) {
+
+        for (int i = 0; i < rule.length(); i++) {
+            if (rule.charAt(i) == variable.charAt(0)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    private boolean rulesListcontainsVariable(List<String> rulesList, String variable) {
         for (String rule : rulesList) {
             for (int i = 0; i < rule.length(); i++) {
                 if (rule.charAt(i) == variable.charAt(0)) {

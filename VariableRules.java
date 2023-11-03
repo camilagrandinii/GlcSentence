@@ -18,7 +18,9 @@ public class VariableRules {
     }
 
     public void setRules(List<String> substitutionRulesList){
-        this.substitutionRules.addAll(substitutionRulesList);
+        for (String rule : substitutionRulesList) {
+            this.substitutionRules.add(rule);
+        }        
     }
 
     public List<String> getSubstitutionRules(){

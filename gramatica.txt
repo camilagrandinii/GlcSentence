@@ -11,3 +11,8 @@ B → b | lambda
 S -> ASA| aB | a | SA | AS | S
 A -> B | S
 B - > b
+
+
+S -> ASA| aB | a | SA | AS 
+A-> b | ASA| aB | a | SA | AS 
+B -> b

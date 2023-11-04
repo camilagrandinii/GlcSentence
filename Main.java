@@ -30,5 +30,6 @@ class Main {
 
         grammar.PrintGrammar();
         grammarConversor.RemoveLambdaRules(grammar);
+        grammarConversor.RemoveUnitRules(grammar);
     }
 }

@@ -1,15 +1,16 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class GrammarConversor {
 
-    public Grammar RemoveLambdaRules(Grammar grammar) {
+    public Grammar ToFncGrammar(Grammar grammar) {
 
         List<String> nullableVariables = findAnulaveis(grammar.rules);
         List<VariableRules> newVariablesRules = eliminarRegrasLambda(grammar.rules, nullableVariables);
-
-        List<String> allRulesList = getAllRulesList(grammar.rules);
+        newVariablesRules = RemoveUnitRules(newVariablesRules);
+        newVariablesRules = transformLongProductions(newVariablesRules);
 
         for (VariableRules variableString : newVariablesRules) {
             System.out.println(variableString.getRule());
@@ -18,7 +19,7 @@ public class GrammarConversor {
         return grammar;
     }
 
-    public static List<String> findAnulaveis(List<VariableRules> grammar) {
+    private static List<String> findAnulaveis(List<VariableRules> grammar) {
         List<String> anulaveis = new ArrayList<String>();
         boolean additionMade;
 
@@ -43,11 +44,10 @@ public class GrammarConversor {
         return anulaveis;
     }
 
-    public Grammar RemoveUnitRules(Grammar grammar) {
-        List<VariableRules> variableRulesList = grammar.rules;
+    private List<VariableRules> RemoveUnitRules(List<VariableRules> variableRules) {
 
-        for (VariableRules variableRules : variableRulesList) {
-            List<String> rulesList = variableRules.getSubstitutionRules();
+        for (VariableRules variableRule : variableRules) {
+            List<String> rulesList = variableRule.getSubstitutionRules();
             List<String> newRulesList = new ArrayList<>(rulesList);
 
             for (String rule : rulesList) {
@@ -56,9 +56,9 @@ public class GrammarConversor {
                     String unitVariable = rule;
 
                     // variável unitária implica a própria variável pra poder so apagar
-                    if (!unitVariable.equals(variableRules.getVariable())) {
+                    if (!unitVariable.equals(variableRule.getVariable())) {
                         VariableRules unitVariableRules = null;
-                        for (VariableRules rules : variableRulesList) {
+                        for (VariableRules rules : variableRules) {
                             if (rules.getVariable().equals(unitVariable)) {
                                 unitVariableRules = rules;
                                 break;
@@ -71,29 +71,25 @@ public class GrammarConversor {
                     }
                 }
             }
-            variableRules.setSubstitutionRules(newRulesList);
+            variableRule.setSubstitutionRules(newRulesList);
         }
 
-        for (VariableRules variableRules : variableRulesList) {
-            List<String> rulesList = variableRules.getSubstitutionRules();
+        for (VariableRules variableRule : variableRules) {
+            List<String> rulesList = variableRule.getSubstitutionRules();
             List<String> nonUnitRules = rulesList.stream()
                     .filter(rule -> !isUnitRule(rule))
                     .collect(Collectors.toList());
-            variableRules.setSubstitutionRules(nonUnitRules);
-        }
-        System.out.println("\n============");
-        for (VariableRules variableString : variableRulesList) {
-            System.out.println(variableString.getRule());
+            variableRule.setSubstitutionRules(nonUnitRules);
         }
 
-        return grammar;
+        return variableRules;
     }
 
     private boolean isUnitRule(String rule) {
         return rule.length() == 1 && Character.isUpperCase(rule.charAt(0));
     }
 
-    public List<VariableRules> eliminarRegrasLambda(List<VariableRules> variableRulesList, List<String> anulaveis) {
+    private List<VariableRules> eliminarRegrasLambda(List<VariableRules> variableRulesList, List<String> anulaveis) {
 
         variableRulesList = removeLambdaRules(variableRulesList);
         List<VariableRules> variableRulesListCombinationAux = new ArrayList<>(variableRulesList);
@@ -161,7 +157,7 @@ public class GrammarConversor {
      * S -> AB | SCB | SB
      */
 
-    public static List<String> gerarCombinacoes(String regra, List<String> variaveisAnulaveis) {
+    private static List<String> gerarCombinacoes(String regra, List<String> variaveisAnulaveis) {
         List<String> combinacoes = new ArrayList<>();
         List<String> variaveis = new ArrayList<>(variaveisAnulaveis);
         List<Integer> nullableIndexes = new ArrayList<>();
@@ -291,4 +287,87 @@ public class GrammarConversor {
 
         return allRulesList;
     }
+
+    // - fazer conversão de aB para U -> a UB
+    public List<VariableRules> transformLongProductions(List<VariableRules> variableRulesList) {
+        boolean doesNotHaveBigRules = false;
+        List<VariableRules> variableRulesListAux = new ArrayList<VariableRules>(variableRulesList);
+        int newVariableCounter = 1;
+
+        do {
+            for (VariableRules variableRules : variableRulesList) {
+                List<String> rulesList = variableRules.getSubstitutionRules();
+                List<String> newRulesList = new ArrayList<>(rulesList);
+
+                for (String rule : rulesList) {
+                    if (removeNumbers(rule).length() >= 3) {
+                        // Realize a transformação para regras com comprimento maior ou igual a três
+                        newRulesList.remove(rule); // Remova a regra original
+
+                        // Divida a regra em duas partes
+                        String var1 = rule.substring(0, 1);
+                        String rest = rule.substring(1);
+
+                        // Crie uma nova variável para a parte restante
+                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter);
+
+                        if(newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))){
+                            newVariableCounter++;
+
+                            List<String> newVariableRulesList = new ArrayList<>();
+                            newVariableRulesList.add(rest);
+
+                            VariableRules variableRule = new VariableRules(newVariable, newVariableRulesList);
+
+                            variableRulesListAux.add(variableRule);
+                        }
+
+                        // Adicione a nova regra
+                        newRulesList.add(var1 + newVariable);
+                        
+                        int index = getVariableRuleIndex(variableRules.variable, variableRulesListAux);
+
+                        variableRulesListAux.get(index).setSubstitutionRules(newRulesList);
+                    }                
+                }
+
+                variableRules.setSubstitutionRules(newRulesList);
+            }
+
+            doesNotHaveBigRules = variableRulesListAux.stream()
+                    .allMatch(variableRule -> variableRule.getSubstitutionRules().stream()
+                            .allMatch(rule -> removeNumbers(rule).length() < 3));
+
+        } while (!doesNotHaveBigRules);
+
+        return variableRulesListAux;
+    }
+
+    public static String removeNumbers(String input) {
+        // Usamos uma expressão regular para substituir todos os dígitos por uma string
+        // vazia
+        String result = input.replaceAll("\\d", "");
+        return result;
+    }
+
+    private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter) {
+        String newVariable = "X" + newVariableCounter;
+        
+        List<String> filteredList = variableRulesList.stream()
+        .filter(variableRule -> variableRule.getVariable().startsWith("X"))
+        .map(vr -> vr.variable)
+        .collect(Collectors.toList());
+
+        Optional<String> matchingVariable = variableRulesList.stream()
+                .filter(variableRule -> rulesListcontainsVariable(filteredList, variableRule.variable))
+                .map(VariableRules::getVariable)
+                .findFirst();
+
+        if (matchingVariable.isPresent()) {
+            return matchingVariable.get();
+        } else {
+            return newVariable;
+        }
+    }
+
 }

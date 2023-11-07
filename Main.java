@@ -29,7 +29,6 @@ class Main {
         bf.close();
 
         grammar.PrintGrammar();
-        grammarConversor.RemoveLambdaRules(grammar);
-        grammarConversor.RemoveUnitRules(grammar);
+        grammarConversor.ToFncGrammar(grammar);
     }
 }

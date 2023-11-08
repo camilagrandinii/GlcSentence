@@ -6,11 +6,11 @@ import java.util.stream.Collectors;
 public class GrammarConversor {
 
     public Grammar ToFncGrammar(Grammar grammar) {
-
         List<String> nullableVariables = findAnulaveis(grammar.rules);
         List<VariableRules> newVariablesRules = eliminarRegrasLambda(grammar.rules, nullableVariables);
         newVariablesRules = RemoveUnitRules(newVariablesRules);
         newVariablesRules = transformLongProductions(newVariablesRules);
+        newVariablesRules = transformMixedProductions(newVariablesRules);
 
         for (VariableRules variableString : newVariablesRules) {
             System.out.println(variableString.getRule());
@@ -311,7 +311,7 @@ public class GrammarConversor {
                         // Crie uma nova variável para a parte restante
                         String newVariable = createNewVariable(variableRulesListAux, newVariableCounter);
 
-                        if(newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))){
+                        if (newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
                             newVariableCounter++;
 
                             List<String> newVariableRulesList = new ArrayList<>();
@@ -324,11 +324,11 @@ public class GrammarConversor {
 
                         // Adicione a nova regra
                         newRulesList.add(var1 + newVariable);
-                        
+
                         int index = getVariableRuleIndex(variableRules.variable, variableRulesListAux);
 
                         variableRulesListAux.get(index).setSubstitutionRules(newRulesList);
-                    }                
+                    }
                 }
 
                 variableRules.setSubstitutionRules(newRulesList);
@@ -352,11 +352,11 @@ public class GrammarConversor {
 
     private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter) {
         String newVariable = "X" + newVariableCounter;
-        
+
         List<String> filteredList = variableRulesList.stream()
-        .filter(variableRule -> variableRule.getVariable().startsWith("X"))
-        .map(vr -> vr.variable)
-        .collect(Collectors.toList());
+                .filter(variableRule -> variableRule.getVariable().startsWith("X"))
+                .map(vr -> vr.variable)
+                .collect(Collectors.toList());
 
         Optional<String> matchingVariable = variableRulesList.stream()
                 .filter(variableRule -> rulesListcontainsVariable(filteredList, variableRule.variable))
@@ -370,4 +370,65 @@ public class GrammarConversor {
         }
     }
 
+    // Novo método para transformar regras com letras maiúsculas seguidas de
+    // minúsculas
+    public List<VariableRules> transformMixedProductions(List<VariableRules> variableRulesList) {
+        List<VariableRules> variableRulesListAux = new ArrayList<>(variableRulesList);
+        int newVariableCounter = 1;
+        for (VariableRules variableRules : variableRulesList) {
+            List<String> rulesList = variableRules.getSubstitutionRules();
+            List<String> newRulesList = new ArrayList<>(rulesList);
+
+            for (String rule : rulesList) {
+                String lowercasePart = getLowercasePart(rule);
+                String uppercasePart = getUppercasePart(rule);
+
+                if (lowercasePart != "" && uppercasePart != "") {
+                    String newVariable = createNewVariable(variableRulesListAux, newVariableCounter);
+                    if (newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
+                        newVariableCounter++;
+                        VariableRules newVariableRule = new VariableRules(newVariable, List.of(lowercasePart));
+
+                        variableRulesListAux.add(newVariableRule);
+                    }
+
+                    newRulesList.remove(rule);
+                    newRulesList.add(newVariable + uppercasePart);
+
+                }
+            }
+
+            variableRules.setSubstitutionRules(newRulesList);
+        }
+
+        return variableRulesListAux;
+    }
+
+    private String getLowercasePart(String rule) {
+        StringBuilder lowercasePart = new StringBuilder();
+
+        for (int i = 0; i < rule.length(); i++) {
+            char character = rule.charAt(i);
+            if (Character.isLowerCase(character)) {
+                lowercasePart.append(character);
+            }
+        }
+
+        return lowercasePart.toString();
+    }
+
+    private String getUppercasePart(String rule) {
+        StringBuilder uppercasePart = new StringBuilder();
+
+        for (int i = 0; i < rule.length(); i++) {
+            char character = rule.charAt(i);
+            if (Character.isUpperCase(character)) {
+                uppercasePart.append(character);
+            }
+        }
+
+        return uppercasePart.toString();
+    }
+
 }
+// passar como parametro o x ao inves de y

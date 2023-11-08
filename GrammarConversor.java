@@ -309,7 +309,7 @@ public class GrammarConversor {
                         String rest = rule.substring(1);
 
                         // Crie uma nova variável para a parte restante
-                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter);
+                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "X");
 
                         if (newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
                             newVariableCounter++;
@@ -350,11 +350,12 @@ public class GrammarConversor {
         return result;
     }
 
-    private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter) {
-        String newVariable = "X" + newVariableCounter;
+    private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter,
+            String variableString) {
+        String newVariable = variableString + newVariableCounter;
 
         List<String> filteredList = variableRulesList.stream()
-                .filter(variableRule -> variableRule.getVariable().startsWith("X"))
+                .filter(variableRule -> variableRule.getVariable().startsWith(variableString))
                 .map(vr -> vr.variable)
                 .collect(Collectors.toList());
 
@@ -384,8 +385,8 @@ public class GrammarConversor {
                 String uppercasePart = getUppercasePart(rule);
 
                 if (lowercasePart != "" && uppercasePart != "") {
-                    String newVariable = createNewVariable(variableRulesListAux, newVariableCounter);
-                    if (newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
+                    String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "Y");
+                    if (newVariable.startsWith("Y") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
                         newVariableCounter++;
                         VariableRules newVariableRule = new VariableRules(newVariable, List.of(lowercasePart));
 
@@ -393,8 +394,11 @@ public class GrammarConversor {
                     }
 
                     newRulesList.remove(rule);
-                    newRulesList.add(newVariable + uppercasePart);
-
+                    if (Character.isLowerCase(rule.charAt(0))) {
+                        newRulesList.add(newVariable + uppercasePart);
+                    } else {
+                        newRulesList.add(uppercasePart + newVariable);
+                    }
                 }
             }
 

@@ -310,15 +310,12 @@ public class GrammarConversor {
                         String rest = rule.substring(1);
 
                         // Crie uma nova variável para a parte restante
-                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "X", rule);
+                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter);
 
                         if (newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
                             newVariableCounter++;
 
-                            List<String> newVariableRulesList = new ArrayList<>();
-                            newVariableRulesList.add(rest);
-
-                            VariableRules variableRule = new VariableRules(newVariable, newVariableRulesList);
+                            VariableRules variableRule = new VariableRules(newVariable, rest);
 
                             variableRulesListAux.add(variableRule);
                         }
@@ -351,7 +348,27 @@ public class GrammarConversor {
         return result;
     }
 
-    private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter,
+    private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter) {
+        String newVariable = "X" + newVariableCounter;
+
+        List<String> filteredList = variableRulesList.stream()
+        .filter(variableRule -> variableRule.getVariable().startsWith("X"))
+        .map(vr -> vr.variable)
+        .collect(Collectors.toList());
+
+        Optional<String> matchingVariable = variableRulesList.stream()
+                .filter(variableRule -> rulesListcontainsVariable(filteredList, variableRule.variable))
+                .map(VariableRules::getVariable)
+                .findFirst();
+
+        if (matchingVariable.isPresent()) {
+            return matchingVariable.get();
+        } else {
+            return newVariable;
+        }
+    }
+
+    private String createNewMixedVariable(List<VariableRules> variableRulesList, int newVariableCounter,
             String variableString, String rule) {
         String newVariable = variableString + newVariableCounter;
 
@@ -360,26 +377,66 @@ public class GrammarConversor {
                 .collect(Collectors.toList());
 
         String matchingVariable = variableRulesList.stream()
-                .filter(variableRule -> duplicatedRule(filteredList, variableRule.variable, rule))
-                .map(VariableRules::getVariable)
+                .filter(variableRule -> duplicatedRule(variableRule, variableRule.variable, rule))
+                .map(v -> v.variable)
                 .findFirst()
-                .orElse("");
+                .orElse(newVariable);
 
-        if (!matchingVariable.isEmpty()) {
-            return matchingVariable;
-        } else {
-            return newVariable;
-        }
+        return matchingVariable;
     }
 
-    private boolean duplicatedRule(List<VariableRules> rulesList, String variable, String newRule) {
+    private boolean hasTerminalProduction(String actualRule, List<VariableRules> variableRules){
+        List<String> newRuleList = Arrays.asList(actualRule.split(""));
+        
+        List<String> ruleMatches = new ArrayList<>();
+            
+        for (VariableRules variableRule : variableRules) {
+            for (String rule : variableRule.substitutionRules) {
+                if(newRuleList.contains(rule)){
+                    ruleMatches.add(rule);
+                }
+            }
+        }
+
+        return newRuleList.size() == ruleMatches.size();
+    }
+    
+    private boolean duplicatedRule(VariableRules variableRule, String variable, String newRule) {        
         List<String> newRuleList = Arrays.asList(newRule.split(""));
 
-        boolean exists = rulesList.stream()
-                .anyMatch(rule -> rule.variable.equals(variable) &&
-                        rule.substitutionRules.contains(newRule));
+        String lowerCasePart = getLowercasePart(newRule);
+        String upperCasePart = getUppercasePart(newRule);
 
-        return exists;
+        boolean isLowerCaseRule = newRuleList.stream()
+            .allMatch(str -> str.chars().allMatch(Character::isLowerCase));
+
+        List<String> ruleMatches = new ArrayList<>();
+
+       if(isLowerCaseRule){       
+            for (String rule : variableRule.substitutionRules) {
+                if(newRuleList.contains(rule)){
+                    ruleMatches.add(rule);
+                }
+            }        
+       } else if(!lowerCasePart.isEmpty() && !upperCasePart.isEmpty() ){        
+            for (String rule : variableRule.substitutionRules) {
+                if(newRuleList.contains(rule)){
+                    ruleMatches.add(rule);
+                }
+            }        
+       }
+       else{      
+            for (String rule : variableRule.substitutionRules) {
+                if(rule.equals(newRule)){
+                    return true;
+                }
+            }        
+       }
+
+       boolean duplicatedRule = ruleMatches.size() == newRuleList.size();
+       boolean lowerAndUpperDuplicated = ruleMatches.size() >= lowerCasePart.length();
+
+        return duplicatedRule || lowerAndUpperDuplicated;
     }
 
     // Novo método para transformar regras com letras maiúsculas seguidas de
@@ -387,6 +444,7 @@ public class GrammarConversor {
     public List<VariableRules> transformMixedProductions(List<VariableRules> variableRulesList) {
         List<VariableRules> variableRulesListAux = new ArrayList<>(variableRulesList);
         int newVariableCounter = 1;
+
         for (VariableRules variableRules : variableRulesList) {
             List<String> rulesList = variableRules.getSubstitutionRules();
             List<String> newRulesList = new ArrayList<>(rulesList);
@@ -394,46 +452,50 @@ public class GrammarConversor {
             for (String rule : rulesList) {
                 String lowercasePart = getLowercasePart(rule);
                 String uppercasePart = getUppercasePart(rule);
+                boolean isLowerCaseRule = rule.chars().allMatch(Character::isLowerCase);
 
                 // Adicione uma verificação para regras de dois caracteres minúsculos
-                if (rule.length() == 2 && Character.isLowerCase(rule.charAt(0))
-                        && Character.isLowerCase(rule.charAt(1))) {
+                if (rule.length() == 2 && isLowerCaseRule) {
                     // Adicione o código para criar novas variáveis para cada caractere
-                    String newVariable1 = createNewVariable(variableRulesListAux, newVariableCounter, "Y", rule);
-                    String newVariable2 = createNewVariable(variableRulesListAux, newVariableCounter + 1, "Y", rule);
-
-                    if (newVariable1.startsWith("Y") && newVariable1.endsWith(String.valueOf(newVariableCounter))
-                            && newVariable2.startsWith("Y")
-                            && newVariable2.endsWith(String.valueOf(newVariableCounter + 1))) {
-                        newVariableCounter += 2;
+                    if(!hasTerminalProduction(rule, variableRulesListAux)){
+                        String newVariable1 = "Y" + newVariableCounter;
+                        String newVariable2 = "Y" + ++newVariableCounter;
+                        
+                        newVariableCounter++;
 
                         VariableRules newVariableRule1 = new VariableRules(newVariable1,
-                                List.of(String.valueOf(rule.charAt(0))));
+                            (String.valueOf(rule.charAt(0))));
                         VariableRules newVariableRule2 = new VariableRules(newVariable2,
-                                List.of(String.valueOf(rule.charAt(1))));
+                                (String.valueOf(rule.charAt(1))));
 
                         variableRulesListAux.add(newVariableRule1);
                         variableRulesListAux.add(newVariableRule2);
+
+                        newRulesList.remove(rule);
+                        newRulesList.add(newVariable1 + newVariable2);
+                    }
+                    else{
+                        String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);
+                        newRulesList.add(newRule);    
+                        newRulesList.remove(rule);
+                    }
+                } else if (!lowercasePart.isEmpty() && !uppercasePart.isEmpty()) {
+                    if(hasTerminalProduction(lowercasePart, variableRulesListAux)){
+                        String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);
+
+                        newRulesList.add(newRule);                        
+                    }
+                    else{
+                    String newVariable = createNewMixedVariable(variableRulesListAux, newVariableCounter, "Y", rule);
+                        if (newVariable.startsWith("Y") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
+                            newVariableCounter++;
+                            VariableRules newVariableRule = new VariableRules(newVariable, lowercasePart);
+
+                            variableRulesListAux.add(newVariableRule);
+                        }
                     }
 
                     newRulesList.remove(rule);
-                    newRulesList.add(newVariable1 + newVariable2);
-
-                } else if (lowercasePart != "" && uppercasePart != "") {
-                    String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "Y", rule);
-                    if (newVariable.startsWith("Y") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
-                        newVariableCounter++;
-                        VariableRules newVariableRule = new VariableRules(newVariable, List.of(lowercasePart));
-
-                        variableRulesListAux.add(newVariableRule);
-                    }
-
-                    newRulesList.remove(rule);
-                    if (Character.isLowerCase(rule.charAt(0))) {
-                        newRulesList.add(newVariable + uppercasePart);
-                    } else {
-                        newRulesList.add(uppercasePart + newVariable);
-                    }
                 }
             }
 
@@ -441,6 +503,22 @@ public class GrammarConversor {
         }
 
         return variableRulesListAux;
+    }
+
+    private String addVariablesToRule(String lowerCasePart, List<VariableRules> variablesRulesList, String actualRule) {
+        List<String> newRuleList = Arrays.asList(lowerCasePart.split(""));
+        
+        for (String lowerCaseString : newRuleList) {
+            for (VariableRules variableRule : variablesRulesList) {
+                for (String rule : variableRule.substitutionRules) {                
+                    if(rule.equals(lowerCaseString)){
+                        actualRule = actualRule.replace(lowerCaseString, variableRule.variable);
+                    }
+                }
+            }
+        }
+
+        return actualRule;
     }
 
     private String getLowercasePart(String rule) {

@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 public class VariableRules {
@@ -7,6 +8,15 @@ public class VariableRules {
     VariableRules(String variable, List<String> substitutionRules){
         this.variable = variable;
         this.substitutionRules = substitutionRules;
+    }
+
+    VariableRules(String variable, String rule){
+        this.variable = variable;
+
+        List<String> substitutionRulesList = new ArrayList<>();
+        substitutionRulesList.add(rule);
+
+        this.substitutionRules = substitutionRulesList;
     }
 
     public String getVariable(){

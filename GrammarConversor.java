@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -11,7 +12,6 @@ public class GrammarConversor {
         newVariablesRules = RemoveUnitRules(newVariablesRules);
         newVariablesRules = transformLongProductions(newVariablesRules);
         newVariablesRules = transformMixedProductions(newVariablesRules);
-
         for (VariableRules variableString : newVariablesRules) {
             System.out.println(variableString.getRule());
         }
@@ -276,6 +276,7 @@ public class GrammarConversor {
         return false;
     }
 
+    // A -> a B -> a
     private List<String> getAllRulesList(List<VariableRules> variableRulesList) {
         List<String> allRulesList = new ArrayList<String>();
 
@@ -309,7 +310,7 @@ public class GrammarConversor {
                         String rest = rule.substring(1);
 
                         // Crie uma nova variável para a parte restante
-                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "X");
+                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "X", rule);
 
                         if (newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
                             newVariableCounter++;
@@ -351,24 +352,34 @@ public class GrammarConversor {
     }
 
     private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter,
-            String variableString) {
+            String variableString, String rule) {
         String newVariable = variableString + newVariableCounter;
 
-        List<String> filteredList = variableRulesList.stream()
+        List<VariableRules> filteredList = variableRulesList.stream()
                 .filter(variableRule -> variableRule.getVariable().startsWith(variableString))
-                .map(vr -> vr.variable)
                 .collect(Collectors.toList());
 
-        Optional<String> matchingVariable = variableRulesList.stream()
-                .filter(variableRule -> rulesListcontainsVariable(filteredList, variableRule.variable))
+        String matchingVariable = variableRulesList.stream()
+                .filter(variableRule -> duplicatedRule(filteredList, variableRule.variable, rule))
                 .map(VariableRules::getVariable)
-                .findFirst();
+                .findFirst()
+                .orElse("");
 
-        if (matchingVariable.isPresent()) {
-            return matchingVariable.get();
+        if (!matchingVariable.isEmpty()) {
+            return matchingVariable;
         } else {
             return newVariable;
         }
+    }
+
+    private boolean duplicatedRule(List<VariableRules> rulesList, String variable, String newRule) {
+        List<String> newRuleList = Arrays.asList(newRule.split(""));
+
+        boolean exists = rulesList.stream()
+                .anyMatch(rule -> rule.variable.equals(variable) &&
+                        rule.substitutionRules.contains(newRule));
+
+        return exists;
     }
 
     // Novo método para transformar regras com letras maiúsculas seguidas de
@@ -384,8 +395,32 @@ public class GrammarConversor {
                 String lowercasePart = getLowercasePart(rule);
                 String uppercasePart = getUppercasePart(rule);
 
-                if (lowercasePart != "" && uppercasePart != "") {
-                    String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "Y");
+                // Adicione uma verificação para regras de dois caracteres minúsculos
+                if (rule.length() == 2 && Character.isLowerCase(rule.charAt(0))
+                        && Character.isLowerCase(rule.charAt(1))) {
+                    // Adicione o código para criar novas variáveis para cada caractere
+                    String newVariable1 = createNewVariable(variableRulesListAux, newVariableCounter, "Y", rule);
+                    String newVariable2 = createNewVariable(variableRulesListAux, newVariableCounter + 1, "Y", rule);
+
+                    if (newVariable1.startsWith("Y") && newVariable1.endsWith(String.valueOf(newVariableCounter))
+                            && newVariable2.startsWith("Y")
+                            && newVariable2.endsWith(String.valueOf(newVariableCounter + 1))) {
+                        newVariableCounter += 2;
+
+                        VariableRules newVariableRule1 = new VariableRules(newVariable1,
+                                List.of(String.valueOf(rule.charAt(0))));
+                        VariableRules newVariableRule2 = new VariableRules(newVariable2,
+                                List.of(String.valueOf(rule.charAt(1))));
+
+                        variableRulesListAux.add(newVariableRule1);
+                        variableRulesListAux.add(newVariableRule2);
+                    }
+
+                    newRulesList.remove(rule);
+                    newRulesList.add(newVariable1 + newVariable2);
+
+                } else if (lowercasePart != "" && uppercasePart != "") {
+                    String newVariable = createNewVariable(variableRulesListAux, newVariableCounter, "Y", rule);
                     if (newVariable.startsWith("Y") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
                         newVariableCounter++;
                         VariableRules newVariableRule = new VariableRules(newVariable, List.of(lowercasePart));
@@ -434,5 +469,58 @@ public class GrammarConversor {
         return uppercasePart.toString();
     }
 
+    // public boolean checkSentenceBelongsLanguage(Grammar grammar, String sentence) {
+    //     Grammar fncGrammar = ToFncGrammar(grammar);
+    //     List<VariableRules> fncRules = fncGrammar.rules;
+    //     int n = sentence.length();
+
+    //     // Inicialização da tabela CYK
+    //     boolean[][][] table = new boolean[n][n][fncRules.size()];
+
+    //     // Preenchimento da tabela com as produções unitárias
+    //     for (int i = 0; i < n; i++) {
+    //         for (int j = 0; j < fncRules.size(); j++) {
+    //             VariableRules variableRules = fncRules.get(j);
+    //             if (variableRules.getSubstitutionRules().contains(String.valueOf(sentence.charAt(i)))) {
+    //                 table[i][i][j] = true;
+    //             }
+    //         }
+    //     }
+
+    //     // Preenchimento da tabela com as produções de dois símbolos ou mais
+    //     for (int len = 2; len <= n; len++) {
+    //         for (int i = 0; i <= n - len; i++) {
+    //             int j = i + len - 1;
+    //             for (int k = i; k < j; k++) {
+    //                 for (VariableRules variableRules : fncRules) {
+    //                     for (String rule : variableRules.getSubstitutionRules()) {
+    //                         if (rule.length() == 2) {
+    //                             char first = rule.charAt(0);
+    //                             char second = rule.charAt(1);
+    //                             int firstIndex = getVariableIndex(fncRules, String.valueOf(first));
+    //                             int secondIndex = getVariableIndex(fncRules, String.valueOf(second));
+
+    //                             if (table[i][k][firstIndex] && table[k + 1][j][secondIndex]) {
+    //                                 table[i][j][getVariableIndex(fncRules, variableRules.getVariable())] = true;
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     // Verificar se a sentença pertence à linguagem
+    //     int startVariableIndex = getVariableIndex(fncRules, String.valueOf(fncGrammar.startVariable));
+    //     return table[0][n - 1][startVariableIndex];
+    // }
+
+    // private int getVariableIndex(List<VariableRules> fncRules, String variable) {
+    //     for (int i = 0; i < fncRules.size(); i++) {
+    //         if (fncRules.get(i).getVariable().equals(variable)) {
+    //             return i;
+    //         }
+    //     }
+    //     return -1;
+    // }
 }
-// passar como parametro o x ao inves de y

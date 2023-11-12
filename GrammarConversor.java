@@ -277,19 +277,6 @@ public class GrammarConversor {
         return false;
     }
 
-    // A -> a B -> a
-    private List<String> getAllRulesList(List<VariableRules> variableRulesList) {
-        List<String> allRulesList = new ArrayList<String>();
-
-        for (VariableRules variableRules : variableRulesList) {
-            for (String rule : variableRules.substitutionRules) {
-                allRulesList.add(variableRules.variable + "->" + rule);
-            }
-        }
-
-        return allRulesList;
-    }
-
     // - fazer conversão de aB para U -> a UB
     public List<VariableRules> transformLongProductions(List<VariableRules> variableRulesList) {
         boolean doesNotHaveBigRules = false;

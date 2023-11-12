@@ -12,6 +12,7 @@ public class GrammarConversor {
         newVariablesRules = RemoveUnitRules(newVariablesRules);
         newVariablesRules = transformLongProductions(newVariablesRules);
         newVariablesRules = transformMixedProductions(newVariablesRules);
+
         for (VariableRules variableString : newVariablesRules) {
             System.out.println(variableString.getRule());
         }
@@ -368,23 +369,6 @@ public class GrammarConversor {
         }
     }
 
-    private String createNewMixedVariable(List<VariableRules> variableRulesList, int newVariableCounter,
-            String variableString, String rule) {
-        String newVariable = variableString + newVariableCounter;
-
-        List<VariableRules> filteredList = variableRulesList.stream()
-                .filter(variableRule -> variableRule.getVariable().startsWith(variableString))
-                .collect(Collectors.toList());
-
-        String matchingVariable = variableRulesList.stream()
-                .filter(variableRule -> duplicatedRule(variableRule, variableRule.variable, rule))
-                .map(v -> v.variable)
-                .findFirst()
-                .orElse(newVariable);
-
-        return matchingVariable;
-    }
-
     private boolean hasTerminalProduction(String actualRule, List<VariableRules> variableRules){
         List<String> newRuleList = Arrays.asList(actualRule.split(""));
         
@@ -399,44 +383,6 @@ public class GrammarConversor {
         }
 
         return newRuleList.size() == ruleMatches.size();
-    }
-    
-    private boolean duplicatedRule(VariableRules variableRule, String variable, String newRule) {        
-        List<String> newRuleList = Arrays.asList(newRule.split(""));
-
-        String lowerCasePart = getLowercasePart(newRule);
-        String upperCasePart = getUppercasePart(newRule);
-
-        boolean isLowerCaseRule = newRuleList.stream()
-            .allMatch(str -> str.chars().allMatch(Character::isLowerCase));
-
-        List<String> ruleMatches = new ArrayList<>();
-
-       if(isLowerCaseRule){       
-            for (String rule : variableRule.substitutionRules) {
-                if(newRuleList.contains(rule)){
-                    ruleMatches.add(rule);
-                }
-            }        
-       } else if(!lowerCasePart.isEmpty() && !upperCasePart.isEmpty() ){        
-            for (String rule : variableRule.substitutionRules) {
-                if(newRuleList.contains(rule)){
-                    ruleMatches.add(rule);
-                }
-            }        
-       }
-       else{      
-            for (String rule : variableRule.substitutionRules) {
-                if(rule.equals(newRule)){
-                    return true;
-                }
-            }        
-       }
-
-       boolean duplicatedRule = ruleMatches.size() == newRuleList.size();
-       boolean lowerAndUpperDuplicated = ruleMatches.size() >= lowerCasePart.length();
-
-        return duplicatedRule || lowerAndUpperDuplicated;
     }
 
     // Novo método para transformar regras com letras maiúsculas seguidas de
@@ -480,20 +426,28 @@ public class GrammarConversor {
                         newRulesList.remove(rule);
                     }
                 } else if (!lowercasePart.isEmpty() && !uppercasePart.isEmpty()) {
+                    
                     if(hasTerminalProduction(lowercasePart, variableRulesListAux)){
                         String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);
 
                         newRulesList.add(newRule);                        
-                    }
+                    }   
                     else{
-                    String newVariable = createNewMixedVariable(variableRulesListAux, newVariableCounter, "Y", rule);
-                        if (newVariable.startsWith("Y") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
-                            newVariableCounter++;
-                            VariableRules newVariableRule = new VariableRules(newVariable, lowercasePart);
+                        List<String> terminalsToCreate = GetTerminalsToCreate(lowercasePart, variableRulesListAux);
 
-                            variableRulesListAux.add(newVariableRule);
-                        }
-                    }
+                        for (String terminalToCreate : terminalsToCreate) {
+
+                            String newVariable1 = "Y" + newVariableCounter;
+                            VariableRules newVariableRule1 = new VariableRules(newVariable1, terminalToCreate);
+                            variableRulesListAux.add(newVariableRule1);
+
+                            newVariableCounter++;
+                        }                                                                                                                     
+                       
+                        String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);
+
+                        newRulesList.add(newRule);         
+                    }                 
 
                     newRulesList.remove(rule);
                 }
@@ -503,6 +457,23 @@ public class GrammarConversor {
         }
 
         return variableRulesListAux;
+    }
+
+    private List<String> GetTerminalsToCreate(String lowerCasePart,  List<VariableRules> variablesRulesList) {
+        List<String> lowerCaseChar = Arrays.asList(lowerCasePart.split(""));
+        List<String> lowerCaseCharAux = new ArrayList<>(lowerCaseChar);
+
+        for (String lowerCase : lowerCaseChar) {
+            for (VariableRules variableRule : variablesRulesList) {
+                for (String rule : variableRule.substitutionRules) {
+                    if(lowerCase.equals(rule)){
+                        lowerCaseCharAux.remove(lowerCase);
+                    }
+                }
+            }
+        }
+
+        return lowerCaseCharAux;
     }
 
     private String addVariablesToRule(String lowerCasePart, List<VariableRules> variablesRulesList, String actualRule) {
@@ -546,59 +517,4 @@ public class GrammarConversor {
 
         return uppercasePart.toString();
     }
-
-    // public boolean checkSentenceBelongsLanguage(Grammar grammar, String sentence) {
-    //     Grammar fncGrammar = ToFncGrammar(grammar);
-    //     List<VariableRules> fncRules = fncGrammar.rules;
-    //     int n = sentence.length();
-
-    //     // Inicialização da tabela CYK
-    //     boolean[][][] table = new boolean[n][n][fncRules.size()];
-
-    //     // Preenchimento da tabela com as produções unitárias
-    //     for (int i = 0; i < n; i++) {
-    //         for (int j = 0; j < fncRules.size(); j++) {
-    //             VariableRules variableRules = fncRules.get(j);
-    //             if (variableRules.getSubstitutionRules().contains(String.valueOf(sentence.charAt(i)))) {
-    //                 table[i][i][j] = true;
-    //             }
-    //         }
-    //     }
-
-    //     // Preenchimento da tabela com as produções de dois símbolos ou mais
-    //     for (int len = 2; len <= n; len++) {
-    //         for (int i = 0; i <= n - len; i++) {
-    //             int j = i + len - 1;
-    //             for (int k = i; k < j; k++) {
-    //                 for (VariableRules variableRules : fncRules) {
-    //                     for (String rule : variableRules.getSubstitutionRules()) {
-    //                         if (rule.length() == 2) {
-    //                             char first = rule.charAt(0);
-    //                             char second = rule.charAt(1);
-    //                             int firstIndex = getVariableIndex(fncRules, String.valueOf(first));
-    //                             int secondIndex = getVariableIndex(fncRules, String.valueOf(second));
-
-    //                             if (table[i][k][firstIndex] && table[k + 1][j][secondIndex]) {
-    //                                 table[i][j][getVariableIndex(fncRules, variableRules.getVariable())] = true;
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     // Verificar se a sentença pertence à linguagem
-    //     int startVariableIndex = getVariableIndex(fncRules, String.valueOf(fncGrammar.startVariable));
-    //     return table[0][n - 1][startVariableIndex];
-    // }
-
-    // private int getVariableIndex(List<VariableRules> fncRules, String variable) {
-    //     for (int i = 0; i < fncRules.size(); i++) {
-    //         if (fncRules.get(i).getVariable().equals(variable)) {
-    //             return i;
-    //         }
-    //     }
-    //     return -1;
-    // }
 }

@@ -5,11 +5,19 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class GrammarConversor {
+    public boolean createdNewVariable = false;        
+    List<String> availableVariables = new ArrayList<>();
+    List<String> newlyAddedVariables = new ArrayList<>();
+
 
     public Grammar ToFncGrammar(Grammar grammar) {
         List<String> nullableVariables = findAnulaveis(grammar.rules);
+        
+        getAvailableVariables(grammar.rules);
+
         List<VariableRules> newVariablesRules = eliminarRegrasLambda(grammar.rules, nullableVariables);
         newVariablesRules = RemoveUnitRules(newVariablesRules);
+
         newVariablesRules = transformLongProductions(newVariablesRules);
         newVariablesRules = transformMixedProductions(newVariablesRules);
 
@@ -19,6 +27,18 @@ public class GrammarConversor {
 
         grammar.rules = newVariablesRules;
         return grammar;
+    }
+
+    private void getAvailableVariables(List<VariableRules> rules) {
+        for (char letra = 'A'; letra <= 'Z'; letra++) {
+            availableVariables.add(String.valueOf(letra));
+        }
+
+        for (VariableRules variableRule : rules) {
+            if(availableVariables.contains(variableRule.variable)){
+                availableVariables.remove(variableRule.variable);
+            }
+        }
     }
 
     private static List<String> findAnulaveis(List<VariableRules> grammar) {
@@ -282,7 +302,6 @@ public class GrammarConversor {
     public List<VariableRules> transformLongProductions(List<VariableRules> variableRulesList) {
         boolean doesNotHaveBigRules = false;
         List<VariableRules> variableRulesListAux = new ArrayList<VariableRules>(variableRulesList);
-        int newVariableCounter = 1;
 
         do {
             for (VariableRules variableRules : variableRulesList) {
@@ -299,11 +318,9 @@ public class GrammarConversor {
                         String rest = rule.substring(1);
 
                         // Crie uma nova variável para a parte restante
-                        String newVariable = createNewVariable(variableRulesListAux, newVariableCounter);
+                        String newVariable = createNewVariable(variableRulesListAux);
 
-                        if (newVariable.startsWith("X") && newVariable.endsWith(String.valueOf(newVariableCounter))) {
-                            newVariableCounter++;
-
+                        if (createdNewVariable) {
                             VariableRules variableRule = new VariableRules(newVariable, rest);
 
                             variableRulesListAux.add(variableRule);
@@ -337,22 +354,26 @@ public class GrammarConversor {
         return result;
     }
 
-    private String createNewVariable(List<VariableRules> variableRulesList, int newVariableCounter) {
-        String newVariable = "X" + newVariableCounter;
-
+    private String createNewVariable(List<VariableRules> variableRulesList) {
+        String newVariable = availableVariables.get(0);
+        
         List<String> filteredList = variableRulesList.stream()
-        .filter(variableRule -> variableRule.getVariable().startsWith("X"))
+        .filter(variableRule -> newlyAddedVariables.contains(variableRule.variable))
         .map(vr -> vr.variable)
         .collect(Collectors.toList());
-
+        
         Optional<String> matchingVariable = variableRulesList.stream()
-                .filter(variableRule -> rulesListcontainsVariable(filteredList, variableRule.variable))
-                .map(VariableRules::getVariable)
-                .findFirst();
-
+        .filter(variableRule -> rulesListcontainsVariable(filteredList, variableRule.variable))
+        .map(VariableRules::getVariable)
+        .findFirst();
+        
         if (matchingVariable.isPresent()) {
+            createdNewVariable = false;
             return matchingVariable.get();
         } else {
+            createdNewVariable = true;
+            availableVariables.remove(newVariable);
+            newlyAddedVariables.add(newVariable);
             return newVariable;
         }
     }
@@ -377,7 +398,6 @@ public class GrammarConversor {
     // minúsculas
     public List<VariableRules> transformMixedProductions(List<VariableRules> variableRulesList) {
         List<VariableRules> variableRulesListAux = new ArrayList<>(variableRulesList);
-        int newVariableCounter = 1;
 
         for (VariableRules variableRules : variableRulesList) {
             List<String> rulesList = variableRules.getSubstitutionRules();
@@ -392,11 +412,14 @@ public class GrammarConversor {
                 if (rule.length() == 2 && isLowerCaseRule) {
                     // Adicione o código para criar novas variáveis para cada caractere
                     if(!hasTerminalProduction(rule, variableRulesListAux)){
-                        String newVariable1 = "Y" + newVariableCounter;
-                        String newVariable2 = "Y" + ++newVariableCounter;
-                        
-                        newVariableCounter++;
+                        String newVariable1 = availableVariables.get(0);
+                        availableVariables.remove(newVariable1);
+                        newlyAddedVariables.add(newVariable1);
 
+                        String newVariable2 = availableVariables.get(0);
+                        availableVariables.remove(newVariable2);
+                        newlyAddedVariables.add(newVariable2);
+                        
                         VariableRules newVariableRule1 = new VariableRules(newVariable1,
                             (String.valueOf(rule.charAt(0))));
                         VariableRules newVariableRule2 = new VariableRules(newVariable2,
@@ -425,11 +448,12 @@ public class GrammarConversor {
 
                         for (String terminalToCreate : terminalsToCreate) {
 
-                            String newVariable1 = "Y" + newVariableCounter;
+                            String newVariable1 = availableVariables.get(0);
+                            availableVariables.remove(newVariable1);
+                            newlyAddedVariables.add(newVariable1);
+                            
                             VariableRules newVariableRule1 = new VariableRules(newVariable1, terminalToCreate);
                             variableRulesListAux.add(newVariableRule1);
-
-                            newVariableCounter++;
                         }                                                                                                                     
                        
                         String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);

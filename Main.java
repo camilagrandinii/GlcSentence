@@ -30,7 +30,7 @@ class Main {
         while ((linha = bf.readLine()) != null) {
             boolean cykResult = cykExecutor.checkSentenceBelongsLanguage(grammar, linha);
 
-            System.out.println("A string '" + linha + "' " + (cykResult ? "" : "nao") + " pertence a gramatica.");
+            System.out.println("A string '" + linha + "' " + (cykResult ? "" : "nao ") + "pertence a gramatica.");
         }
 
         bf.close();

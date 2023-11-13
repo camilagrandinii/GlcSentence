@@ -17,6 +17,7 @@ public class GrammarConversor {
             System.out.println(variableString.getRule());
         }
 
+        grammar.rules = newVariablesRules;
         return grammar;
     }
 

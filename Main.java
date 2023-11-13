@@ -15,7 +15,7 @@ class Main {
         GrammarConversor grammarConversor = new GrammarConversor();
         CYK cykExecutor = new CYK();
 
-        String nome_arquivo = "gramatica3.txt"; // Substitua pelo nome do arquivo que deseja ler
+        String nome_arquivo = "gramatica.txt"; // Substitua pelo nome do arquivo que deseja ler
         BufferedReader bf = new BufferedReader(new FileReader(nome_arquivo));
 
         Grammar grammar = new Grammar();
@@ -28,9 +28,9 @@ class Main {
         grammar = grammarConversor.ToFncGrammar(grammar);
 
         while ((linha = bf.readLine()) != null) {
-            //boolean cykResult = cykExecutor.cyk(ruleArrayGrammar.rules, linha);
+            boolean cykResult = cykExecutor.checkSentenceBelongsLanguage(grammar, linha);
 
-            //System.out.println("A string '" + linha + "' " + (cykResult ? "faz" : "não faz") + " parte da gramática.");
+            System.out.println("A string '" + linha + "' " + (cykResult ? "" : "nao") + " pertence a gramatica.");
         }
 
         bf.close();

@@ -1,0 +1,2 @@
+G3 = ({S, A, B}, {a, b}, {S -> aAB, A -> a, B -> bBc | lambda}, {S})
+aa

@@ -1,7 +1,7 @@
 import java.util.List;
 
 public class CYK {
-    public boolean checkSentenceBelongsLanguage(Grammar grammar, String sentence) {
+    public boolean CykCnf(Grammar grammar, String sentence) {
         List<VariableRules> fncRules = grammar.rules;
         int n = sentence.length();
 
@@ -44,6 +44,59 @@ public class CYK {
         // Verificar se a sentença pertence à linguagem
         int startVariableIndex = getVariableIndex(fncRules, String.valueOf(grammar.startVariable));
         return table[0][n - 1][startVariableIndex];
+    }
+
+    public boolean Cyk2Nf(Grammar grammar, String sentence) {
+        List<VariableRules> twoNfRules = grammar.rules;
+        int n = sentence.length();
+    
+        // Inicialização da tabela CYK
+        boolean[][][] table = new boolean[n][n][twoNfRules.size()];
+    
+        // Preenchimento da tabela com as produções unitárias e terminais
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < twoNfRules.size(); j++) {
+                VariableRules variableRules = twoNfRules.get(j);
+                for (String rule : variableRules.getSubstitutionRules()) {
+                    if (rule.length() == 1) {
+                        // Verifica se é uma produção terminal ou uma produção unitária não-terminal
+                        if (rule.equals(String.valueOf(sentence.charAt(i))) ||
+                            (Character.isUpperCase(rule.charAt(0)) && getVariableIndex(twoNfRules, rule) != -1)) {
+                            table[i][i][j] = true;
+                        }
+                    }
+                }
+            }
+        }
+    
+        // Preenchimento da tabela com produções binárias
+        for (int len = 2; len <= n; len++) {
+            for (int i = 0; i <= n - len; i++) {
+                int j = i + len - 1;
+                for (int k = i; k < j; k++) {
+                    for (VariableRules variableRules : twoNfRules) {
+                        for (String rule : variableRules.getSubstitutionRules()) {
+                            if (rule.length() == 2) {
+                                int firstIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(0)));
+                                int secondIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(1)));
+    
+                                if (firstIndex != -1 && secondIndex != -1 && table[i][k][firstIndex] && table[k + 1][j][secondIndex]) {
+                                    table[i][j][getVariableIndex(twoNfRules, variableRules.getVariable())] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+        // Verificar se a sentença pertence à linguagem
+        int startVariableIndex = getVariableIndex(twoNfRules, String.valueOf(grammar.startVariable));
+        if (startVariableIndex != -1) {
+            return table[0][n - 1][startVariableIndex];
+        } else {
+            return false;
+        }
     }
 
     private int getVariableIndex(List<VariableRules> fncRules, String variable) {

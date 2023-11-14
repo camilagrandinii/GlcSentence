@@ -8,22 +8,26 @@ public class GrammarConversor {
     public boolean createdNewVariable = false;        
     List<String> availableVariables = new ArrayList<>();
     List<String> newlyAddedVariables = new ArrayList<>();
+    List<VariableRules> removedLambdaVariableRules = new ArrayList<>();
 
+    GrammarConversor(Grammar grammar){
+        getAvailableVariables(grammar.rules);
+        List<String> nullableVariables = findAnulaveis(grammar.rules);
+        removedLambdaVariableRules = eliminarRegrasLambda(grammar.rules, nullableVariables);
+    }
 
     public Grammar ToFncGrammar(Grammar grammar) {
-        List<String> nullableVariables = findAnulaveis(grammar.rules);
-        
-        getAvailableVariables(grammar.rules);
-
-        List<VariableRules> newVariablesRules = eliminarRegrasLambda(grammar.rules, nullableVariables);
-        newVariablesRules = RemoveUnitRules(newVariablesRules);
+        List<VariableRules> newVariablesRules = RemoveUnitRules(removedLambdaVariableRules);
 
         newVariablesRules = transformLongProductions(newVariablesRules);
         newVariablesRules = transformMixedProductions(newVariablesRules);
 
-        for (VariableRules variableString : newVariablesRules) {
-            System.out.println(variableString.getRule());
-        }
+        grammar.rules = newVariablesRules;
+        return grammar;
+    }
+
+    public Grammar To2NfGrammar(Grammar grammar){
+        List<VariableRules> newVariablesRules = transformLongProductions(removedLambdaVariableRules);
 
         grammar.rules = newVariablesRules;
         return grammar;

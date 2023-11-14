@@ -12,7 +12,6 @@ import java.io.IOException;
 class Main {
     public static void main(String[] args) throws IOException {
         GrammarExtractor grammarExtractor = new GrammarExtractor();
-        GrammarConversor grammarConversor = new GrammarConversor();
         CYK cykExecutor = new CYK();
 
         String nome_arquivo = "gramatica.txt"; // Substitua pelo nome do arquivo que deseja ler
@@ -22,15 +21,27 @@ class Main {
 
         String linha = bf.readLine();
         grammar = grammarExtractor.ExtractGrammar(linha, grammar);
+
+        GrammarConversor grammarConversor = new GrammarConversor(grammar);
         
         grammar.PrintGrammar();
         
-        grammar = grammarConversor.ToFncGrammar(grammar);
+        grammar = grammarConversor.To2NfGrammar(grammar);
+
+        grammar.PrintGrammar();
+
+        //grammar = grammarConversor.ToFncGrammar(grammar);
 
         while ((linha = bf.readLine()) != null) {
-            boolean cykResult = cykExecutor.checkSentenceBelongsLanguage(grammar, linha);
+            //boolean cykResult = cykExecutor.CykCnf(grammar, linha);
 
-            System.out.println("A string '" + linha + "' " + (cykResult ? "" : "nao ") + "pertence a gramatica.");
+            // System.out.println("Resultado CYK based on Chomsky Normal Form");
+            // System.out.println("A string '" + linha + "' " + (cykResult ? "" : "nao ") + "pertence a gramatica.");
+
+            boolean cyk2NfResult = cykExecutor.Cyk2Nf(grammar, linha);
+            System.out.println("Resultado CYK based on the 2NF form");
+
+            System.out.println("A string '" + linha + "' " + (cyk2NfResult ? "" : "nao ") + "pertence a gramatica.");
         }
 
         bf.close();

@@ -77,8 +77,17 @@ public class CYK {
                     for (VariableRules variableRules : twoNfRules) {
                         for (String rule : variableRules.getSubstitutionRules()) {
                             if (rule.length() == 2) {
-                                int firstIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(0)));
-                                int secondIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(1)));
+                                int firstIndex = 0;
+                                int secondIndex = 0;
+
+                                if(IsLowerCaseRule(rule)){
+                                    firstIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(0)));
+                                    secondIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(1)));
+                                }
+                                else{
+                                    firstIndex = getLowerCaseVariableIndex(twoNfRules, String.valueOf(rule.charAt(0)));
+                                    secondIndex = getLowerCaseVariableIndex(twoNfRules, String.valueOf(rule.charAt(1)));
+                                }
     
                                 if (firstIndex != -1 && secondIndex != -1 && table[i][k][firstIndex] && table[k + 1][j][secondIndex]) {
                                     table[i][j][getVariableIndex(twoNfRules, variableRules.getVariable())] = true;
@@ -106,5 +115,18 @@ public class CYK {
             }
         }
         return -1; // Retorna -1 se a variável não for encontrada
-    }    
+    } 
+
+    private int getLowerCaseVariableIndex(List<VariableRules> fncRules, String variable) {
+    for (int i = 0; i < fncRules.size(); i++) {
+        if (fncRules.get(i).getSubstitutionRules().contains(variable)) {
+            return i;
+        }
+    }
+    return -1; // Retorna -1 se a variável não for encontrada
+    } 
+    
+    private boolean IsLowerCaseRule(String rule){
+        return rule.chars().allMatch(Character::isLowerCase);
+    }
 }

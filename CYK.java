@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class CYK {
@@ -40,7 +42,7 @@ public class CYK {
                 }
             }
         }
-        
+
         // Verificar se a sentença pertence à linguagem
         int startVariableIndex = getVariableIndex(fncRules, String.valueOf(grammar.startVariable));
         return table[0][n - 1][startVariableIndex];
@@ -49,10 +51,10 @@ public class CYK {
     public boolean Cyk2Nf(Grammar grammar, String sentence) {
         List<VariableRules> twoNfRules = grammar.rules;
         int n = sentence.length();
-    
+
         // Inicialização da tabela CYK
         boolean[][][] table = new boolean[n][n][twoNfRules.size()];
-    
+
         // Preenchimento da tabela com as produções unitárias e terminais
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < twoNfRules.size(); j++) {
@@ -61,14 +63,14 @@ public class CYK {
                     if (rule.length() == 1) {
                         // Verifica se é uma produção terminal ou uma produção unitária não-terminal
                         if (rule.equals(String.valueOf(sentence.charAt(i))) ||
-                            (Character.isUpperCase(rule.charAt(0)) && getVariableIndex(twoNfRules, rule) != -1)) {
+                                (Character.isUpperCase(rule.charAt(0)) && getVariableIndex(twoNfRules, rule) != -1)) {
                             table[i][i][j] = true;
                         }
                     }
                 }
             }
         }
-    
+
         // Preenchimento da tabela com produções binárias
         for (int len = 2; len <= n; len++) {
             for (int i = 0; i <= n - len; i++) {
@@ -80,16 +82,16 @@ public class CYK {
                                 int firstIndex = 0;
                                 int secondIndex = 0;
 
-                                if(IsLowerCaseRule(rule)){
+                                if (IsLowerCaseRule(rule)) {
+                                    firstIndex = getLowerCaseVariableIndex(twoNfRules, String.valueOf(rule.charAt(0)));
+                                    secondIndex = getLowerCaseVariableIndex(twoNfRules, String.valueOf(rule.charAt(1)));
+                                } else {
                                     firstIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(0)));
                                     secondIndex = getVariableIndex(twoNfRules, String.valueOf(rule.charAt(1)));
                                 }
-                                else{
-                                    firstIndex = getLowerCaseVariableIndex(twoNfRules, String.valueOf(rule.charAt(0)));
-                                    secondIndex = getLowerCaseVariableIndex(twoNfRules, String.valueOf(rule.charAt(1)));
-                                }
-    
-                                if (firstIndex != -1 && secondIndex != -1 && table[i][k][firstIndex] && table[k + 1][j][secondIndex]) {
+
+                                if (firstIndex != -1 && secondIndex != -1 && table[i][k][firstIndex]
+                                        && table[k + 1][j][secondIndex]) {
                                     table[i][j][getVariableIndex(twoNfRules, variableRules.getVariable())] = true;
                                 }
                             }
@@ -98,7 +100,7 @@ public class CYK {
                 }
             }
         }
-    
+
         // Verificar se a sentença pertence à linguagem
         int startVariableIndex = getVariableIndex(twoNfRules, String.valueOf(grammar.startVariable));
         if (startVariableIndex != -1) {
@@ -115,18 +117,37 @@ public class CYK {
             }
         }
         return -1; // Retorna -1 se a variável não for encontrada
-    } 
+    }
+
+    private List<String> GetSeparatedLowerCaseRules(List<String> rules) {
+        List<String> newRules = new ArrayList<>();
+
+        for (String rule : rules) {
+            if (IsLowerCaseRule(rule)) {
+                newRules.addAll(Arrays.asList(rule.split("")));
+            } else {
+                newRules.add(rule);
+            }
+        }
+
+        return newRules;
+    }
 
     private int getLowerCaseVariableIndex(List<VariableRules> fncRules, String variable) {
-    for (int i = 0; i < fncRules.size(); i++) {
-        if (fncRules.get(i).getSubstitutionRules().contains(variable)) {
-            return i;
+        for (int i = 0; i < fncRules.size(); i++) {
+
+            fncRules.get(i).substitutionRules = GetSeparatedLowerCaseRules(fncRules.get(i).substitutionRules);
+
+            for (String rule : fncRules.get(i).getSubstitutionRules()) {
+                if (rule.equals(variable)) {
+                    return i;
+                }
+            }
         }
+        return -1; // Retorna -1 se a variável não for encontrada
     }
-    return -1; // Retorna -1 se a variável não for encontrada
-    } 
-    
-    private boolean IsLowerCaseRule(String rule){
+
+    private boolean IsLowerCaseRule(String rule) {
         return rule.chars().allMatch(Character::isLowerCase);
     }
 }

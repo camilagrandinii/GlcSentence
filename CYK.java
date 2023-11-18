@@ -1,6 +1,6 @@
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -52,92 +52,71 @@ public class CYK {
         return table[0][n - 1][startVariableIndex];
     }
 
-    public static boolean Cyk2Nf(Grammar grammar, String sentence) {
-        List<VariableRules> rules = grammar.rules;
-        int n = sentence.length();
-
-        // Inicialização da tabela CYK
-        Set<String>[][] T = new HashSet[n][n];
-
-        // Inicializar a tabela com conjuntos vazios
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
+    public boolean Cyk2Nf(Grammar grammar, Map<String, Set<String>> inverseUnitGraph, String w) {
+        int n = w.length();
+        Set<String>[][] T = new Set[n + 1][n + 1];
+    
+        // Inicialização da tabela T com conjuntos vazios
+        for (int i = 0; i <= n; i++) {
+            for (int j = 0; j <= n; j++) {
                 T[i][j] = new HashSet<>();
             }
         }
-
-        // Construir o fecho transitivo das produções unitárias
-        Map<String, Set<String>> unitClosure = buildUnitClosure(rules);
-
-        // Preenchimento da tabela com as produções terminais usando o fecho unitário
-        for (int i = 0; i < n; i++) {
-            T[i][i].addAll(unitClosure.getOrDefault(String.valueOf(sentence.charAt(i)), new HashSet<>()));
+    
+        // Primeira fase do algoritmo CYK: preenchimento da diagonal principal
+        for (int i = 1; i <= n; i++) {
+            // O fechamento reflexivo-transitivo para um único símbolo é o próprio símbolo
+            // mais qualquer não-terminal que pode levar a ele diretamente
+            T[i][i].add(String.valueOf(w.charAt(i - 1)));
+            T[i][i] = getReflexiveTransitiveClosure(inverseUnitGraph, T[i][i]);
         }
-
-        // Preenchimento da tabela com produções binárias
-        for (int j = 1; j < n; j++) {
-            for (int i = j - 1; i >= 0; i--) {
-                for (int h = i; h < j; h++) {
-                    for (VariableRules rule : rules) {
-                        for (String production : rule.getSubstitutionRules()) {
-                            if (production.length() == 2) {
-                                char y = production.charAt(0);
-                                char z = production.charAt(1);
-                                if (T[i][h].contains(String.valueOf(y)) && T[h + 1][j].contains(String.valueOf(z))) {
-                                    T[i][j].add(rule.getVariable());
+    
+        // Segunda fase do algoritmo CYK: preenchimento do restante da tabela
+        for (int j = 2; j <= n; j++) {
+            for (int i = j - 1; i >= 1; i--) {
+                for (int h = i; h <= j - 1; h++) {
+                    for (VariableRules vr : grammar.rules) {
+                        String variable = vr.getVariable();
+                        for (String rule : vr.getSubstitutionRules()) {
+                            String[] parts = rule.split(" ");
+                            if (parts.length == 2) {
+                                String B = parts[0];
+                                String C = parts[1];
+                                if (T[i][h].contains(B) && T[h + 1][j].contains(C)) {
+                                    T[i][j].add(variable);
                                 }
                             }
                         }
                     }
-                    // Aplicar o fecho transitivo às produções unitárias
-                    Set<String> closure = new HashSet<>();
-                    for (String nonTerminal : T[i][j]) {
-                        closure.addAll(unitClosure.getOrDefault(nonTerminal, new HashSet<>()));
-                    }
-                    T[i][j].addAll(closure);
                 }
+                // Após cada atualização de T[i][j], aplicamos o fechamento reflexivo-transitivo
+                T[i][j] = getReflexiveTransitiveClosure(inverseUnitGraph, T[i][j]);
             }
         }
-
-        // Verificar se a sentença pertence à linguagem
-        return T[0][n - 1].contains(grammar.startVariable);
+    
+        // Verificação final para ver se a palavra w é gerada pela gramática
+        return T[1][n].contains(grammar.startVariable);
     }
-
-    private static Map<String, Set<String>> buildUnitClosure(List<VariableRules> rules) {
-        Map<String, Set<String>> closure = new HashMap<>();
-
-        // Inicializar o fecho com produções diretas
-        for (VariableRules rule : rules) {
-            for (String production : rule.getSubstitutionRules()) {
-                if (production.length() == 1 && Character.isUpperCase(production.charAt(0))) {
-                    closure.computeIfAbsent(rule.getVariable(), k -> new HashSet<>()).add(production);
-                }
-            }
-        }
-
-        // Calcular o fecho transitivo
-        boolean updated;
+    
+    private Set<String> getReflexiveTransitiveClosure(Map<String, Set<String>> inverseUnitGraph, Set<String> symbols) {
+        Set<String> closure = new HashSet<>(symbols);
+        boolean changed;
         do {
-            updated = false;
-            for (VariableRules rule : rules) {
-                Set<String> ruleClosure = closure.get(rule.getVariable());
-                if (ruleClosure != null) {
-                    for (String unit : new HashSet<>(ruleClosure)) {
-                        if (closure.containsKey(unit) && closure.get(unit).size() > 0) {
-                            if (ruleClosure.addAll(closure.get(unit))) {
-                                updated = true;
-                            }
+            changed = false;
+            Set<String> newSymbols = new HashSet<>();
+            for (String symbol : closure) {
+                if (inverseUnitGraph.containsKey(symbol)) {
+                    Set<String> edges = inverseUnitGraph.get(symbol);
+                    for (String edge : edges) {
+                        if (!closure.contains(edge)) {
+                            newSymbols.add(edge);
+                            changed = true;
                         }
                     }
                 }
             }
-        } while (updated);
-
-        // Incluir os próprios não-terminais no fecho
-        for (String nonTerminal : closure.keySet()) {
-            closure.get(nonTerminal).add(nonTerminal);
-        }
-
+            closure.addAll(newSymbols);
+        } while (changed);
         return closure;
     }
 

@@ -12,13 +12,13 @@ public class GrammarConversor {
 
     GrammarConversor(Grammar grammar){
         getAvailableVariables(grammar.rules);
-        nullableVariables = findAnulaveis(grammar.rules);
+        nullableVariables = findNullableVariables(grammar.rules);
     }
 
     public Grammar ToFncGrammar(Grammar grammar) {
         
         List<VariableRules>  newVariablesRules = Bin(grammar.rules);
-        newVariablesRules = Del(newVariablesRules, nullableVariables);
+        newVariablesRules = Del(newVariablesRules);
         newVariablesRules = Unit(newVariablesRules);
         newVariablesRules = Term(newVariablesRules);
 
@@ -45,7 +45,7 @@ public class GrammarConversor {
         }
     }
 
-    private static List<String> findAnulaveis(List<VariableRules> grammar) {
+    public List<String> findNullableVariables(List<VariableRules> grammar) {
         List<String> anulaveis = new ArrayList<String>();
         boolean additionMade;
 
@@ -135,7 +135,7 @@ public class GrammarConversor {
      * A -> a
      * B -> B | Ba
      */
-    private List<VariableRules> Del(List<VariableRules> variableRulesList, List<String> anulaveis) {
+    private List<VariableRules> Del(List<VariableRules> variableRulesList) {
 
         variableRulesList = removeLambdaRules(variableRulesList);
         List<VariableRules> variableRulesListCombinationAux = new ArrayList<>(variableRulesList);
@@ -147,7 +147,7 @@ public class GrammarConversor {
 
             // 2. Para cada variável anulável (A), faça as substituições apropriadas nas
             // regras.
-            for (String variavelAnulavel : anulaveis) {
+            for (String variavelAnulavel : nullableVariables) {
                 List<VariableRules> regrasComVariavelAnulavel = new ArrayList<>();
 
                 // Encontre as regras que contêm a variável anulável.
@@ -163,7 +163,7 @@ public class GrammarConversor {
 
                     for (String originalRule : substitutionRules) {
                         if (ruleContainsVariable(originalRule, variavelAnulavel)) {
-                            List<String> combinacoes = gerarCombinacoes(originalRule, anulaveis);
+                            List<String> combinacoes = gerarCombinacoes(originalRule, nullableVariables);
 
                             if (!combinacoes.isEmpty()) {
                                 VariableRules newRule = new VariableRules(variable.variable, combinacoes);
@@ -185,10 +185,10 @@ public class GrammarConversor {
                 }
             }
 
-            anulaveis = findAnulaveis(variableRulesListCombinationAux);
+            nullableVariables = findNullableVariables(variableRulesListCombinationAux);
             variableRulesList = removeLambdaRules(variableRulesList);
 
-        } while (anulaveis.size() > 0);
+        } while (nullableVariables.size() > 0);
 
         return variableRulesListCombinationAux;
     }

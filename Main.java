@@ -5,10 +5,13 @@
  * 2023 - 2o. Semestre
 */
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.io.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 class Main {
     public static void main(String[] args) throws IOException {
@@ -53,7 +56,12 @@ class Main {
                 cykResult = cykExecutor.CykCnf(grammar, linha);
                 algoritmo = "CYK padrão";
             } else {
-                cykResult = cykExecutor.Cyk2Nf(grammar, linha);
+                List<String> nullableVariables = grammarConversor.findNullableVariables(grammar.rules);
+                Map<String, Set<String>> unitRelation = grammar.GetUnitRleation(nullableVariables);
+                Set<String> allSymbols = grammar.ComputeV();
+                Map<String, Set<String>> inverseUnitGraph = grammar.GetInverseUnitGraph(allSymbols, unitRelation);
+
+                cykResult = cykExecutor.Cyk2Nf(grammar, inverseUnitGraph, linha);
                 algoritmo = "CYK otimizado";
             }
             

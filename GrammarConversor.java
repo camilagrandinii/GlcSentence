@@ -8,26 +8,26 @@ public class GrammarConversor {
     public boolean createdNewVariable = false;        
     List<String> availableVariables = new ArrayList<>();
     List<String> newlyAddedVariables = new ArrayList<>();
-    List<VariableRules> removedLambdaVariableRules = new ArrayList<>();
+    List<String> nullableVariables = new ArrayList<>();
 
     GrammarConversor(Grammar grammar){
         getAvailableVariables(grammar.rules);
-        List<String> nullableVariables = findAnulaveis(grammar.rules);
-        removedLambdaVariableRules = eliminarRegrasLambda(grammar.rules, nullableVariables);
+        nullableVariables = findAnulaveis(grammar.rules);
     }
 
     public Grammar ToFncGrammar(Grammar grammar) {
-        List<VariableRules> newVariablesRules = RemoveUnitRules(removedLambdaVariableRules);
-
-        newVariablesRules = transformLongProductions(newVariablesRules);
-        newVariablesRules = transformMixedProductions(newVariablesRules);
+        
+        List<VariableRules>  newVariablesRules = Bin(grammar.rules);
+        newVariablesRules = Del(newVariablesRules, nullableVariables);
+        newVariablesRules = Unit(newVariablesRules);
+        newVariablesRules = Term(newVariablesRules);
 
         grammar.rules = newVariablesRules;
         return grammar;
     }
 
     public Grammar To2NfGrammar(Grammar grammar){
-        List<VariableRules> newVariablesRules = transformLongProductions(removedLambdaVariableRules);
+        List<VariableRules> newVariablesRules = Bin(grammar.rules);
 
         grammar.rules = newVariablesRules;
         return grammar;
@@ -70,7 +70,17 @@ public class GrammarConversor {
         return anulaveis;
     }
 
-    private List<VariableRules> RemoveUnitRules(List<VariableRules> variableRules) {
+    /**
+     * Method that delete unit productions of VARIABLES
+     * @param variableRulesList
+     * @return List containing the new list of variable rules
+     * 
+     * EX: A -> AB | B, B -> b
+     * 
+     * A -> AB | b
+     * (deletamos a regra B -> b)
+     */
+    private List<VariableRules> Unit(List<VariableRules> variableRules) {
 
         for (VariableRules variableRule : variableRules) {
             List<String> rulesList = variableRule.getSubstitutionRules();
@@ -115,7 +125,17 @@ public class GrammarConversor {
         return rule.length() == 1 && Character.isUpperCase(rule.charAt(0));
     }
 
-    private List<VariableRules> eliminarRegrasLambda(List<VariableRules> variableRulesList, List<String> anulaveis) {
+    /**
+     * Method that eliminates nullable productions (that contains the productions of lambda)
+     * @param variableRulesList
+     * @return List containing the updated list of variable rules
+     * 
+     * EX: A -> a | lambda, B -> BA
+     * 
+     * A -> a
+     * B -> B | Ba
+     */
+    private List<VariableRules> Del(List<VariableRules> variableRulesList, List<String> anulaveis) {
 
         variableRulesList = removeLambdaRules(variableRulesList);
         List<VariableRules> variableRulesListCombinationAux = new ArrayList<>(variableRulesList);
@@ -302,8 +322,17 @@ public class GrammarConversor {
         return false;
     }
 
-    // - fazer conversão de aB para U -> a UB
-    public List<VariableRules> transformLongProductions(List<VariableRules> variableRulesList) {
+    /**
+     * Method that transforms the LONG productions (of size > 3) into rules of sizes <= 2
+     * @param variableRulesList
+     * @return List containing the updated list of variable rules
+     * 
+     * EX: A -> abC
+     * 
+     * A -> aD
+     * D -> bC
+     */
+    public List<VariableRules> Bin(List<VariableRules> variableRulesList) {
         boolean doesNotHaveBigRules = false;
         List<VariableRules> variableRulesListAux = new ArrayList<VariableRules>(variableRulesList);
 
@@ -313,7 +342,7 @@ public class GrammarConversor {
                 List<String> newRulesList = new ArrayList<>(rulesList);
 
                 for (String rule : rulesList) {
-                    if (removeNumbers(rule).length() >= 3) {
+                    if (rule.length() >= 3 && (!rule.equals("lambda"))) {
                         // Realize a transformação para regras com comprimento maior ou igual a três
                         newRulesList.remove(rule); // Remova a regra original
 
@@ -344,7 +373,7 @@ public class GrammarConversor {
 
             doesNotHaveBigRules = variableRulesListAux.stream()
                     .allMatch(variableRule -> variableRule.getSubstitutionRules().stream()
-                            .allMatch(rule -> removeNumbers(rule).length() < 3));
+                            .allMatch(rule -> removeNumbers(rule).length() < 3 || rule.equals("lambda")));
 
         } while (!doesNotHaveBigRules);
 
@@ -398,9 +427,18 @@ public class GrammarConversor {
         return newRuleList.size() == ruleMatches.size();
     }
 
-    // Novo método para transformar regras com letras maiúsculas seguidas de
-    // minúsculas
-    public List<VariableRules> transformMixedProductions(List<VariableRules> variableRulesList) {
+    /**
+     * Method that transforms the MIXED productions (aB or Ba) into only TERMINAL or VARIABLES productions
+     * @param variableRulesList
+     * @return List containing the updated list of variable rules
+     * 
+     * EX: A -> cB, B -> b
+     * 
+     * A -> CB
+     * B -> b
+     * C -> c (added rule)
+     */
+    public List<VariableRules> Term(List<VariableRules> variableRulesList) {
         List<VariableRules> variableRulesListAux = new ArrayList<>(variableRulesList);
 
         for (VariableRules variableRules : variableRulesList) {

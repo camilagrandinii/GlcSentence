@@ -23,9 +23,9 @@ class Main {
         String linha = bf.readLine();
         grammar = grammarExtractor.ExtractGrammar(linha, grammar);
 
-        GrammarConversor grammarConversor = new GrammarConversor(grammar);
-
         grammar.PrintGrammar();
+
+        GrammarConversor grammarConversor = new GrammarConversor(grammar);
 
         System.out.println("\nQual algoritmo você deseja executar?");
         System.out.println("1) CYK padrão");

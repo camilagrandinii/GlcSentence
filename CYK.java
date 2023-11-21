@@ -1,10 +1,14 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javafx.util.Pair;
 
 public class CYK {
     public boolean CykCnf(Grammar grammar, String sentence) {
@@ -52,72 +56,71 @@ public class CYK {
         return table[0][n - 1][startVariableIndex];
     }
 
-    public boolean Cyk2Nf(Grammar grammar, Map<String, Set<String>> inverseUnitGraph, String w) {
+    public boolean Cyk2Nf(Grammar grammar, Set<String> allSymbols, Map<String, Set<String>> reflexiveTransitiveClosure,
+            String w) {
         int n = w.length();
-        Set<String>[][] T = new Set[n + 1][n + 1];
-    
-        // Inicialização da tabela T com conjuntos vazios
-        for (int i = 0; i <= n; i++) {
-            for (int j = 0; j <= n; j++) {
-                T[i][j] = new HashSet<>();
+
+        // Verificação inicial para caracteres válidos
+        boolean hasOnlyValidCharacters = w.chars()
+                .mapToObj(c -> String.valueOf((char) c))
+                .allMatch(allSymbols::contains);
+
+        if (!hasOnlyValidCharacters) {
+            return false;
+        }
+
+        // Inicialização da tabela CYK
+        ArrayList<ArrayList<Set<String>>> table = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            table.add(new ArrayList<>());
+            for (int j = 0; j < n; j++) {
+                table.get(i).add(new HashSet<>());
             }
         }
-    
-        // Primeira fase do algoritmo CYK: preenchimento da diagonal principal
-        for (int i = 1; i <= n; i++) {
-            // O fechamento reflexivo-transitivo para um único símbolo é o próprio símbolo
-            // mais qualquer não-terminal que pode levar a ele diretamente
-            T[i][i].add(String.valueOf(w.charAt(i - 1)));
-            T[i][i] = getReflexiveTransitiveClosure(inverseUnitGraph, T[i][i]);
+
+        // Preenchimento da diagonal principal
+        for (int i = 0; i < n; i++) {
+            String symbol = String.valueOf(w.charAt(i));
+            table.get(i).get(i).addAll(reflexiveTransitiveClosure.getOrDefault(symbol, new HashSet<>()));
         }
-    
-        // Segunda fase do algoritmo CYK: preenchimento do restante da tabela
-        for (int j = 2; j <= n; j++) {
-            for (int i = j - 1; i >= 1; i--) {
-                for (int h = i; h <= j - 1; h++) {
-                    for (VariableRules vr : grammar.rules) {
-                        String variable = vr.getVariable();
-                        for (String rule : vr.getSubstitutionRules()) {
-                            String[] parts = rule.split(" ");
-                            if (parts.length == 2) {
-                                String B = parts[0];
-                                String C = parts[1];
-                                if (T[i][h].contains(B) && T[h + 1][j].contains(C)) {
-                                    T[i][j].add(variable);
-                                }
+
+        // Mapeamento otimizado para produções binárias
+        Map<Pair<String, String>, Set<String>> binaryProductionsMap = new HashMap<>();
+        for (VariableRules vr : grammar.rules) {
+            for (String production : vr.substitutionRules) {
+                String[] parts = production.split("");
+                if (parts.length == 2) {
+                    Pair<String, String> pair = new Pair<>(parts[0], parts[1]);
+                    binaryProductionsMap.computeIfAbsent(pair, k -> new HashSet<>()).add(vr.variable);
+                }
+            }
+        }
+
+        // Preenchimento do restante da tabela
+        for (int j = 1; j < n; j++) {
+            for (int i = j - 1; i >= 0; i--) {
+                for (int h = i; h < j; h++) {
+                    Set<String> BSet = table.get(i).get(h);
+                    Set<String> CSet = table.get(h + 1).get(j);
+                    for (String B : BSet) {
+                        for (String C : CSet) {
+                            Set<String> ASet = binaryProductionsMap.get(new Pair<>(B, C));
+                            if (ASet != null) {
+                                table.get(i).get(j).addAll(ASet);
                             }
                         }
                     }
-                }
-                // Após cada atualização de T[i][j], aplicamos o fechamento reflexivo-transitivo
-                T[i][j] = getReflexiveTransitiveClosure(inverseUnitGraph, T[i][j]);
-            }
-        }
-    
-        // Verificação final para ver se a palavra w é gerada pela gramática
-        return T[1][n].contains(grammar.startVariable);
-    }
-    
-    private Set<String> getReflexiveTransitiveClosure(Map<String, Set<String>> inverseUnitGraph, Set<String> symbols) {
-        Set<String> closure = new HashSet<>(symbols);
-        boolean changed;
-        do {
-            changed = false;
-            Set<String> newSymbols = new HashSet<>();
-            for (String symbol : closure) {
-                if (inverseUnitGraph.containsKey(symbol)) {
-                    Set<String> edges = inverseUnitGraph.get(symbol);
-                    for (String edge : edges) {
-                        if (!closure.contains(edge)) {
-                            newSymbols.add(edge);
-                            changed = true;
-                        }
+                    // Aplica o fechamento transitivo reflexivo uma vez
+                    Set<String> currentCellSymbols = new HashSet<>(table.get(i).get(j));
+                    for (String symbol : currentCellSymbols) {
+                        table.get(i).get(j).addAll(reflexiveTransitiveClosure.getOrDefault(symbol, new HashSet<>()));
                     }
                 }
             }
-            closure.addAll(newSymbols);
-        } while (changed);
-        return closure;
+        }
+
+        // Verificação final
+        return table.get(0).get(n - 1).contains(grammar.startVariable);
     }
 
     private int getVariableIndex(List<VariableRules> fncRules, String variable) {

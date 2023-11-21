@@ -6,19 +6,19 @@
 */
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 class Main {
     public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         GrammarExtractor grammarExtractor = new GrammarExtractor();
         CYK cykExecutor = new CYK();
 
-        String nome_arquivo = "gramatica.txt"; // Substitua pelo nome do arquivo que deseja ler
+        String nome_arquivo  = reader.readLine();
+        nome_arquivo+=".txt";
+
         BufferedReader bf = new BufferedReader(new FileReader(nome_arquivo));
 
         Grammar grammar = new Grammar();
@@ -34,7 +34,6 @@ class Main {
         System.out.println("1) CYK padrão");
         System.out.println("2) CYK otimizado");
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         int escolha = Integer.parseInt(reader.readLine());
 
         String sufixoArquivo;
@@ -50,19 +49,17 @@ class Main {
 
         while ((linha = bf.readLine()) != null) {
             boolean cykResult;
-            String algoritmo;
 
             if (escolha == 1) {
                 cykResult = cykExecutor.CykCnf(grammar, linha);
-                algoritmo = "CYK padrão";
             } else {
                 List<String> nullableVariables = grammarConversor.findNullableVariables(grammar.rules);
-                Map<String, Set<String>> unitRelation = grammar.GetUnitRleation(nullableVariables);
-                Set<String> allSymbols = grammar.ComputeV();
-                Map<String, Set<String>> inverseUnitGraph = grammar.GetInverseUnitGraph(allSymbols, unitRelation);
-
-                cykResult = cykExecutor.Cyk2Nf(grammar, inverseUnitGraph, linha);
-                algoritmo = "CYK otimizado";
+                Map<String, Set<String>> unitRelation = grammar.GetUnitRelation(nullableVariables);
+                Set<String> allSymbols = grammar.ComputeV(grammar);
+                Map<String, Set<String>> inverseUnitGraph = grammar.GetInverseUnitGraph(unitRelation, allSymbols);
+                Map<String, Set<String>> transitiveClosure = grammar.computeTransitiveClosure(inverseUnitGraph, allSymbols);
+                
+                cykResult = cykExecutor.Cyk2Nf(grammar, allSymbols, transitiveClosure, linha);
             }
             
             System.out.println("A string '" + linha + "' " + (cykResult ? "" : "nao ") + "pertence a gramatica.");
@@ -80,6 +77,3 @@ class Main {
         bf.close();
     }
 }
-
-// se passa so vazio ta quebrando 
-// nao fizemos tambem dois seguidos tipo aBB b-> lambda ele identifica aB duas vezes

@@ -1,0 +1,9 @@
+GG = ({L, S, E}, {a, b, c, d}, {L -> aSc | SEE, S -> SE | lambda, E -> b | L}, {L})
+abc
+abbc
+ab
+ac
+ad
+bc
+bd
+cd

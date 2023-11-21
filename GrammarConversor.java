@@ -10,6 +10,9 @@ public class GrammarConversor {
     List<String> newlyAddedVariables = new ArrayList<>();
     List<String> nullableVariables = new ArrayList<>();
 
+    GrammarConversor(){
+    }
+
     GrammarConversor(Grammar grammar){
         getAvailableVariables(grammar.rules);
         nullableVariables = findNullableVariables(grammar.rules);
@@ -311,6 +314,17 @@ public class GrammarConversor {
         return false;
     }
 
+    private boolean rulesListContainsRule(List<VariableRules> variableRulesList, String ruleToAdd) {
+        for (VariableRules variableRule : variableRulesList) {
+           for (String rule : variableRule.substitutionRules) {
+             if(rule.equals(ruleToAdd)){
+                return true;
+             }
+           }
+        }
+        return false;
+    }
+
     private boolean rulesListcontainsVariable(List<String> rulesList, String variable) {
         for (String rule : rulesList) {
             for (int i = 0; i < rule.length(); i++) {
@@ -348,13 +362,13 @@ public class GrammarConversor {
 
                         // Divida a regra em duas partes
                         String var1 = rule.substring(0, 1);
-                        String rest = rule.substring(1);
+                        String ruleToAdd = rule.substring(1);
 
                         // Crie uma nova variável para a parte restante
-                        String newVariable = createNewVariable(variableRulesListAux);
+                        String newVariable = createNewVariable(variableRulesListAux, ruleToAdd);
 
                         if (createdNewVariable) {
-                            VariableRules variableRule = new VariableRules(newVariable, rest);
+                            VariableRules variableRule = new VariableRules(newVariable, ruleToAdd);
 
                             variableRulesListAux.add(variableRule);
                         }
@@ -387,16 +401,13 @@ public class GrammarConversor {
         return result;
     }
 
-    private String createNewVariable(List<VariableRules> variableRulesList) {
+    private String createNewVariable(List<VariableRules> variableRulesList, String ruleToAdd) {
         String newVariable = availableVariables.get(0);
-        
-        List<String> filteredList = variableRulesList.stream()
-        .filter(variableRule -> newlyAddedVariables.contains(variableRule.variable))
-        .map(vr -> vr.variable)
-        .collect(Collectors.toList());
+
+        List<VariableRules> newlyAddedRules = GetNewlyAddedRules(newlyAddedVariables, variableRulesList);
         
         Optional<String> matchingVariable = variableRulesList.stream()
-        .filter(variableRule -> rulesListcontainsVariable(filteredList, variableRule.variable))
+        .filter(variableRule -> rulesListContainsRule(newlyAddedRules, ruleToAdd))
         .map(VariableRules::getVariable)
         .findFirst();
         
@@ -409,6 +420,17 @@ public class GrammarConversor {
             newlyAddedVariables.add(newVariable);
             return newVariable;
         }
+    }
+
+    private List<VariableRules> GetNewlyAddedRules(List<String> newlyAddedVariables, List<VariableRules> variableRulesList) {
+        List<VariableRules> newlyAddedRules = new ArrayList<>();
+
+        for (String variable : newlyAddedVariables) {
+            int variableIndex = getVariableRuleIndex(variable, variableRulesList);
+            newlyAddedRules.add(variableRulesList.get(variableIndex));
+        }
+
+        return newlyAddedRules;
     }
 
     private boolean hasTerminalProduction(String actualRule, List<VariableRules> variableRules){
@@ -546,12 +568,12 @@ public class GrammarConversor {
         return actualRule;
     }
 
-    private String getLowercasePart(String rule) {
+    public String getLowercasePart(String rule) {
         StringBuilder lowercasePart = new StringBuilder();
 
         for (int i = 0; i < rule.length(); i++) {
             char character = rule.charAt(i);
-            if (Character.isLowerCase(character)) {
+            if (Character.isLowerCase(character) || Character.isDigit(character)) {
                 lowercasePart.append(character);
             }
         }
@@ -559,12 +581,12 @@ public class GrammarConversor {
         return lowercasePart.toString();
     }
 
-    private String getUppercasePart(String rule) {
+    public String getUppercasePart(String rule) {
         StringBuilder uppercasePart = new StringBuilder();
 
         for (int i = 0; i < rule.length(); i++) {
             char character = rule.charAt(i);
-            if (Character.isUpperCase(character)) {
+            if (Character.isUpperCase(character) || Character.isDigit(character)) {
                 uppercasePart.append(character);
             }
         }

@@ -4,17 +4,14 @@ public class GrammarExtractor {
         String[] linhaSplited;
 
         input = input.replace('"', ' ')
-                     .replace("(", "")
-                     .replace(")", " ")
-                     .replace("=", " ")
-                     .replace(")", "")
+                     .replace("=", "")
                      .replace("},", "")
                      .replace("}", "")
                      .replace(" ", "");
 
         linhaSplited = input.split("\\{");
 
-        String grammarName = linhaSplited[0];
+        String grammarName = linhaSplited[0].replace("(", "");
         grammar.setName(grammarName);
 
         String[] variablesArray = linhaSplited[1].split(",");
@@ -33,7 +30,7 @@ public class GrammarExtractor {
              grammar.setVariableRules(variableRulesArray[0], specificVariableRules);
         }
 
-        grammar.setStartVariable(linhaSplited[4]);
+        grammar.setStartVariable(linhaSplited[4].replace(")", ""));
 
         return grammar;
     }

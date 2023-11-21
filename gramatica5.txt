@@ -1,0 +1,2 @@
+G5 = ({S, A, B, C, D}, {a, b, c}, {S -> A | aB, A -> B | lambda, B -> lambda | CD, C -> c | lambda, D -> b | lambda}, {S})
+acb

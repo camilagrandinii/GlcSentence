@@ -1,0 +1,2 @@
+G4 = ({E, T, F, I}, {a, b, 0, 1, (, ), +, *}, {E -> T | E + T, T -> F | T * F, F -> aI | bI | (E), I -> 0I | 1I | lambda}, {E})
+(a0+b)∗a

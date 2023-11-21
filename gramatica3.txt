@@ -1,2 +1,4 @@
-G3 = ({S, A, B}, {a, b}, {S -> aAB, A -> a, B -> bBc | lambda}, {S})
+G3 = ({S, A, B}, {a, b, c}, {S -> aAB, A -> a, B -> bBc | lambda}, {S})
 aa
+aabc
+aabbcc

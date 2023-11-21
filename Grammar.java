@@ -108,6 +108,10 @@ public class Grammar {
         for (VariableRules variableRule : grammar.rules) {
             // Add all non-terminal variables to V
             V.add(variableRule.variable);
+
+            for (String rule : variableRule.substitutionRules) {
+                V.add(rule);
+            }
         }
 
         // Add all terminal symbols to V

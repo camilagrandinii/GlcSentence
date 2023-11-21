@@ -1,2 +1,2 @@
-G2 = ({S, A, B, C}, {a, b}, {S -> AB, A -> BA | a, B -> cc | b, C -> AB | a}, {S})
+G2 = ({S, A, B, C}, {a, b, c}, {S -> AB, A -> BA | a, B -> cc | b, C -> AB | a}, {S})
 ab

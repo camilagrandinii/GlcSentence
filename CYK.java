@@ -1,16 +1,12 @@
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javafx.util.Pair;
+public class CYK {    
 
-public class CYK {
     public boolean CykCnf(Grammar grammar, String sentence) {
         List<VariableRules> fncRules = grammar.rules;
         int n = sentence.length();
@@ -85,12 +81,12 @@ public class CYK {
         }
 
         // Mapeamento otimizado para produções binárias
-        Map<Pair<String, String>, Set<String>> binaryProductionsMap = new HashMap<>();
+       Map<ProductionPair, Set<String>> binaryProductionsMap = new HashMap<>();
         for (VariableRules vr : grammar.rules) {
             for (String production : vr.substitutionRules) {
                 String[] parts = production.split("");
                 if (parts.length == 2) {
-                    Pair<String, String> pair = new Pair<>(parts[0], parts[1]);
+                    ProductionPair pair = new ProductionPair(parts[0], parts[1]);
                     binaryProductionsMap.computeIfAbsent(pair, k -> new HashSet<>()).add(vr.variable);
                 }
             }
@@ -104,7 +100,7 @@ public class CYK {
                     Set<String> CSet = table.get(h + 1).get(j);
                     for (String B : BSet) {
                         for (String C : CSet) {
-                            Set<String> ASet = binaryProductionsMap.get(new Pair<>(B, C));
+                            Set<String> ASet = binaryProductionsMap.get(new ProductionPair(B, C));
                             if (ASet != null) {
                                 table.get(i).get(j).addAll(ASet);
                             }
@@ -130,37 +126,5 @@ public class CYK {
             }
         }
         return -1; // Retorna -1 se a variável não for encontrada
-    }
-
-    private List<String> GetSeparatedLowerCaseRules(List<String> rules) {
-        List<String> newRules = new ArrayList<>();
-
-        for (String rule : rules) {
-            if (IsLowerCaseRule(rule)) {
-                newRules.addAll(Arrays.asList(rule.split("")));
-            } else {
-                newRules.add(rule);
-            }
-        }
-
-        return newRules;
-    }
-
-    private int getLowerCaseVariableIndex(List<VariableRules> fncRules, String variable) {
-        for (int i = 0; i < fncRules.size(); i++) {
-
-            fncRules.get(i).substitutionRules = GetSeparatedLowerCaseRules(fncRules.get(i).substitutionRules);
-
-            for (String rule : fncRules.get(i).getSubstitutionRules()) {
-                if (rule.equals(variable)) {
-                    return i;
-                }
-            }
-        }
-        return -1; // Retorna -1 se a variável não for encontrada
-    }
-
-    private boolean IsLowerCaseRule(String rule) {
-        return rule.chars().allMatch(Character::isLowerCase);
     }
 }

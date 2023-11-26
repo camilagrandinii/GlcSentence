@@ -6,6 +6,7 @@
 */
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,7 +20,7 @@ class Main {
         String nome_arquivo  = reader.readLine();
         nome_arquivo+=".txt";
 
-        BufferedReader bf = new BufferedReader(new FileReader(nome_arquivo));
+        BufferedReader bf = new BufferedReader(new InputStreamReader(new FileInputStream(nome_arquivo), StandardCharsets.UTF_8));
 
         Grammar grammar = new Grammar();
 

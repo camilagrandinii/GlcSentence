@@ -57,9 +57,16 @@ public class CYK {
         int n = w.length();
 
         // Verificação inicial para caracteres válidos
-        boolean hasOnlyValidCharacters = w.chars()
-                .mapToObj(c -> String.valueOf((char) c))
-                .allMatch(allSymbols::contains);
+        boolean hasOnlyValidCharacters = true;
+
+        for (int i = 0; i < w.length(); i++) {
+            char ch = w.charAt(i);
+            String str = String.valueOf(ch);
+            if (!allSymbols.contains(str)) {
+                hasOnlyValidCharacters = false;
+                break;
+            }
+        }
 
         if (!hasOnlyValidCharacters) {
             return false;

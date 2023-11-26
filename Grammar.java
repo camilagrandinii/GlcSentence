@@ -96,6 +96,9 @@ public class Grammar {
                     // a unit rule
                     UG.computeIfAbsent(variableRule.variable, k -> new HashSet<>()).add(lowercasePart);
                 }
+                else if(!lowercasePart.isEmpty() && !lowercasePart.equals("lambda")){
+                    UG.computeIfAbsent(variableRule.variable, k -> new HashSet<>()).add(lowercasePart);
+                }
             }
         }
 

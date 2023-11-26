@@ -85,8 +85,16 @@ public class Grammar {
                                                                                        // maiúsculo está na lista de
                                                                                        // anuláveis
 
+                boolean isAnyUpperCaseNullable = rule.chars() // Cria um stream de inteiros representando os caracteres
+                        // da string
+                        .mapToObj(c -> (char) c) // Converte cada inteiro de volta para um caractere
+                        .filter(Character::isUpperCase) // Filtra apenas caracteres maiúsculos
+                        .anyMatch(c -> nullableVariables.contains(String.valueOf(c))); // Verifica se cada caractere
+                                                                                       // maiúsculo está na lista de
+                                                                                       // anuláveis
+
                 // Split the production to consider individual symbols
-                String[] symbols = rule.split(" ");
+                String[] symbols = rule.split("");
 
                 // Check if the rule is a direct unit rule (single non-terminal)
                 if (symbols.length == 1 && this.variables.contains(symbols[0])) {
@@ -96,13 +104,24 @@ public class Grammar {
                     // a unit rule
                     UG.computeIfAbsent(variableRule.variable, k -> new HashSet<>()).add(lowercasePart);
                 }
-                else if(!lowercasePart.isEmpty() && !lowercasePart.equals("lambda")){
-                    UG.computeIfAbsent(variableRule.variable, k -> new HashSet<>()).add(lowercasePart);
+                else if (rule.length() == 2 && isAnyUpperCaseNullable) {
+                    int nullablePosition = FindNullablePosition(symbols, nullableVariables);
+                    UG.computeIfAbsent(variableRule.variable, k -> new HashSet<>()).add(symbols[nullablePosition]);
                 }
             }
         }
 
         return UG;
+    }
+
+    private int FindNullablePosition(String[] symbols, List<String> nullableVariables){
+        for (int i = 0; i < symbols.length-1; i++) {
+            if(!nullableVariables.contains(symbols[i])){
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public Set<String> ComputeV(Grammar grammar) {

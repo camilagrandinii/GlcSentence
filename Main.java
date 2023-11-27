@@ -13,6 +13,7 @@ import java.util.Set;
 
 class Main {
     public static void main(String[] args) throws IOException {
+        double seconds = 0;
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         GrammarExtractor grammarExtractor = new GrammarExtractor();
         CYK cykExecutor = new CYK();
@@ -36,6 +37,8 @@ class Main {
         System.out.println("2) CYK otimizado");
 
         int escolha = Integer.parseInt(reader.readLine());
+
+        long startTime = System.nanoTime();
 
         String sufixoArquivo;
         if (escolha == 1) {
@@ -73,8 +76,20 @@ class Main {
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
-        }
 
+            long endTime = System.nanoTime();
+
+            // Calcular o tempo decorrido
+            long timeElapsed = endTime - startTime;
+
+            // Converter nanossegundos para segundos
+            seconds = (double) timeElapsed / 1_000_000_000.0;
+
+            // Imprimir o tempo decorrido
+        }
+        
+        System.out.println("Tempo de execução: " + seconds + " segundos");
+        
         bf.close();
     }
 }

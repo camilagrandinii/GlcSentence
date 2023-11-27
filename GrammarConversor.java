@@ -2,25 +2,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class GrammarConversor {
-    public boolean createdNewVariable = false;        
+    public boolean createdNewVariable = false;
     List<String> availableVariables = new ArrayList<>();
     List<String> newlyAddedVariables = new ArrayList<>();
     List<String> nullableVariables = new ArrayList<>();
 
-    GrammarConversor(){
+    GrammarConversor() {
     }
 
-    GrammarConversor(Grammar grammar){
+    GrammarConversor(Grammar grammar) {
         getAvailableVariables(grammar.rules);
         nullableVariables = findNullableVariables(grammar.rules);
     }
 
     public Grammar ToFncGrammar(Grammar grammar) {
-        
-        List<VariableRules>  newVariablesRules = Bin(grammar.rules);
+
+        List<VariableRules> newVariablesRules = Bin(grammar.rules);
         newVariablesRules = Del(newVariablesRules);
         newVariablesRules = Unit(newVariablesRules);
         newVariablesRules = Term(newVariablesRules);
@@ -29,7 +30,7 @@ public class GrammarConversor {
         return grammar;
     }
 
-    public Grammar To2NfGrammar(Grammar grammar){
+    public Grammar To2NfGrammar(Grammar grammar) {
         List<VariableRules> newVariablesRules = Bin(grammar.rules);
 
         grammar.rules = newVariablesRules;
@@ -42,7 +43,7 @@ public class GrammarConversor {
         }
 
         for (VariableRules variableRule : rules) {
-            if(availableVariables.contains(variableRule.variable)){
+            if (availableVariables.contains(variableRule.variable)) {
                 availableVariables.remove(variableRule.variable);
             }
         }
@@ -75,53 +76,63 @@ public class GrammarConversor {
 
     /**
      * Method that delete unit productions of VARIABLES
+     * 
      * @param variableRulesList
      * @return List containing the new list of variable rules
      * 
-     * EX: A -> AB | B, B -> b
+     *         EX: A -> AB | B, B -> b
      * 
-     * A -> AB | b
-     * (deletamos a regra B -> b)
+     *         A -> AB | b
+     *         (deletamos a regra B -> b)
      */
     private List<VariableRules> Unit(List<VariableRules> variableRules) {
+        List<String> newRulesList = new ArrayList<>();
 
         for (VariableRules variableRule : variableRules) {
             List<String> rulesList = variableRule.getSubstitutionRules();
-            List<String> newRulesList = new ArrayList<>(rulesList);
+            newRulesList = new ArrayList<>(rulesList);
 
-            for (String rule : rulesList) {
-                // confere se é uma regra apenas e ta em maiscula pra ter certeza que é variavel
-                if (isUnitRule(rule)) {
-                    String unitVariable = rule;
+            do {
 
-                    // variável unitária implica a própria variável pra poder so apagar
-                    if (!unitVariable.equals(variableRule.getVariable())) {
-                        VariableRules unitVariableRules = null;
-                        for (VariableRules rules : variableRules) {
-                            if (rules.getVariable().equals(unitVariable)) {
-                                unitVariableRules = rules;
-                                break;
+                rulesList = variableRule.getSubstitutionRules();
+
+                for (String rule : rulesList) {
+                    // confere se é uma regra apenas e ta em maiscula pra ter certeza que é variavel
+                    if (isUnitRule(rule)) {
+                        String unitVariable = rule;
+
+                        // variável unitária implica a própria variável pra poder so apagar
+                        if (!unitVariable.equals(variableRule.getVariable())) {
+                            VariableRules unitVariableRules = null;
+
+                            for (VariableRules rules : variableRules) {
+                                if (rules.getVariable().equals(unitVariable)) {
+                                    unitVariableRules = rules;
+                                    break;
+                                }
                             }
+
+                            newRulesList = newRulesList.stream().filter(r -> r.length() > 1).collect(Collectors.toList());
+
+                            List<String> unitRules = unitVariableRules.getSubstitutionRules();
+
+                            newRulesList.addAll(unitRules);
                         }
-
-                        List<String> unitRules = unitVariableRules.getSubstitutionRules();
-
-                        newRulesList.addAll(unitRules);
                     }
                 }
-            }
-            variableRule.setSubstitutionRules(newRulesList);
-        }
 
-        for (VariableRules variableRule : variableRules) {
-            List<String> rulesList = variableRule.getSubstitutionRules();
-            List<String> nonUnitRules = rulesList.stream()
-                    .filter(rule -> !isUnitRule(rule))
-                    .collect(Collectors.toList());
-            variableRule.setSubstitutionRules(nonUnitRules);
+                variableRule.setSubstitutionRules(newRulesList);
+
+            } while (DoUnitRulesStillExist(newRulesList));
         }
 
         return variableRules;
+    }
+
+    private boolean DoUnitRulesStillExist(List<String> newRulesList) {
+        boolean result = newRulesList.stream().anyMatch(r -> r.length() == 1 && r.chars().allMatch(Character::isUpperCase));
+
+        return result;
     }
 
     private boolean isUnitRule(String rule) {
@@ -129,14 +140,16 @@ public class GrammarConversor {
     }
 
     /**
-     * Method that eliminates nullable productions (that contains the productions of lambda)
+     * Method that eliminates nullable productions (that contains the productions of
+     * lambda)
+     * 
      * @param variableRulesList
      * @return List containing the updated list of variable rules
      * 
-     * EX: A -> a | lambda, B -> BA
+     *         EX: A -> a | lambda, B -> BA
      * 
-     * A -> a
-     * B -> B | Ba
+     *         A -> a
+     *         B -> B | Ba
      */
     private List<VariableRules> Del(List<VariableRules> variableRulesList) {
 
@@ -316,11 +329,11 @@ public class GrammarConversor {
 
     private boolean rulesListContainsRule(List<VariableRules> variableRulesList, String ruleToAdd) {
         for (VariableRules variableRule : variableRulesList) {
-           for (String rule : variableRule.substitutionRules) {
-             if(rule.equals(ruleToAdd)){
-                return true;
-             }
-           }
+            for (String rule : variableRule.substitutionRules) {
+                if (rule.equals(ruleToAdd)) {
+                    return true;
+                }
+            }
         }
         return false;
     }
@@ -337,14 +350,16 @@ public class GrammarConversor {
     }
 
     /**
-     * Method that transforms the LONG productions (of size > 3) into rules of sizes <= 2
+     * Method that transforms the LONG productions (of size > 3) into rules of sizes
+     * <= 2
+     * 
      * @param variableRulesList
      * @return List containing the updated list of variable rules
      * 
-     * EX: A -> abC
+     *         EX: A -> abC
      * 
-     * A -> aD
-     * D -> bC
+     *         A -> aD
+     *         D -> bC
      */
     public List<VariableRules> Bin(List<VariableRules> variableRulesList) {
         boolean doesNotHaveBigRules = false;
@@ -387,30 +402,23 @@ public class GrammarConversor {
 
             doesNotHaveBigRules = variableRulesListAux.stream()
                     .allMatch(variableRule -> variableRule.getSubstitutionRules().stream()
-                            .allMatch(rule -> removeNumbers(rule).length() < 3 || rule.equals("lambda")));
+                            .allMatch(rule -> rule.length() < 3 || rule.equals("lambda")));
 
         } while (!doesNotHaveBigRules);
 
         return variableRulesListAux;
     }
 
-    public static String removeNumbers(String input) {
-        // Usamos uma expressão regular para substituir todos os dígitos por uma string
-        // vazia
-        String result = input.replaceAll("\\d", "");
-        return result;
-    }
-
     private String createNewVariable(List<VariableRules> variableRulesList, String ruleToAdd) {
         String newVariable = availableVariables.get(0);
 
         List<VariableRules> newlyAddedRules = GetNewlyAddedRules(newlyAddedVariables, variableRulesList);
-        
+
         Optional<String> matchingVariable = variableRulesList.stream()
-        .filter(variableRule -> rulesListContainsRule(newlyAddedRules, ruleToAdd))
-        .map(VariableRules::getVariable)
-        .findFirst();
-        
+                .filter(variableRule -> rulesListContainsRule(newlyAddedRules, ruleToAdd))
+                .map(VariableRules::getVariable)
+                .findFirst();
+
         if (matchingVariable.isPresent()) {
             createdNewVariable = false;
             return matchingVariable.get();
@@ -422,7 +430,8 @@ public class GrammarConversor {
         }
     }
 
-    private List<VariableRules> GetNewlyAddedRules(List<String> newlyAddedVariables, List<VariableRules> variableRulesList) {
+    private List<VariableRules> GetNewlyAddedRules(List<String> newlyAddedVariables,
+            List<VariableRules> variableRulesList) {
         List<VariableRules> newlyAddedRules = new ArrayList<>();
 
         for (String variable : newlyAddedVariables) {
@@ -433,14 +442,14 @@ public class GrammarConversor {
         return newlyAddedRules;
     }
 
-    private boolean hasTerminalProduction(String actualRule, List<VariableRules> variableRules){
+    private boolean hasTerminalProduction(String actualRule, List<VariableRules> variableRules) {
         List<String> newRuleList = Arrays.asList(actualRule.split(""));
-        
+
         List<String> ruleMatches = new ArrayList<>();
-            
+
         for (VariableRules variableRule : variableRules) {
             for (String rule : variableRule.substitutionRules) {
-                if(newRuleList.contains(rule)){
+                if (newRuleList.contains(rule)) {
                     ruleMatches.add(rule);
                 }
             }
@@ -450,15 +459,17 @@ public class GrammarConversor {
     }
 
     /**
-     * Method that transforms the MIXED productions (aB or Ba) into only TERMINAL or VARIABLES productions
+     * Method that transforms the MIXED productions (aB or Ba) into only TERMINAL or
+     * VARIABLES productions
+     * 
      * @param variableRulesList
      * @return List containing the updated list of variable rules
      * 
-     * EX: A -> cB, B -> b
+     *         EX: A -> cB, B -> b
      * 
-     * A -> CB
-     * B -> b
-     * C -> c (added rule)
+     *         A -> CB
+     *         B -> b
+     *         C -> c (added rule)
      */
     public List<VariableRules> Term(List<VariableRules> variableRulesList) {
         List<VariableRules> variableRulesListAux = new ArrayList<>(variableRulesList);
@@ -470,12 +481,12 @@ public class GrammarConversor {
             for (String rule : rulesList) {
                 String lowercasePart = getLowercasePart(rule);
                 String uppercasePart = getUppercasePart(rule);
-                boolean isLowerCaseRule = rule.chars().allMatch(Character::isLowerCase);
+                boolean isLowerCaseRule = rule.chars().noneMatch(Character::isUpperCase);
 
                 // Adicione uma verificação para regras de dois caracteres minúsculos
                 if (rule.length() == 2 && isLowerCaseRule) {
                     // Adicione o código para criar novas variáveis para cada caractere
-                    if(!hasTerminalProduction(rule, variableRulesListAux)){
+                    if (!hasTerminalProduction(rule, variableRulesListAux)) {
                         String newVariable1 = availableVariables.get(0);
                         availableVariables.remove(newVariable1);
                         newlyAddedVariables.add(newVariable1);
@@ -483,9 +494,9 @@ public class GrammarConversor {
                         String newVariable2 = availableVariables.get(0);
                         availableVariables.remove(newVariable2);
                         newlyAddedVariables.add(newVariable2);
-                        
+
                         VariableRules newVariableRule1 = new VariableRules(newVariable1,
-                            (String.valueOf(rule.charAt(0))));
+                                (String.valueOf(rule.charAt(0))));
                         VariableRules newVariableRule2 = new VariableRules(newVariable2,
                                 (String.valueOf(rule.charAt(1))));
 
@@ -494,20 +505,18 @@ public class GrammarConversor {
 
                         newRulesList.remove(rule);
                         newRulesList.add(newVariable1 + newVariable2);
-                    }
-                    else{
+                    } else {
                         String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);
-                        newRulesList.add(newRule);    
+                        newRulesList.add(newRule);
                         newRulesList.remove(rule);
                     }
                 } else if (!lowercasePart.isEmpty() && !uppercasePart.isEmpty()) {
-                    
-                    if(hasTerminalProduction(lowercasePart, variableRulesListAux)){
+
+                    if (hasTerminalProduction(lowercasePart, variableRulesListAux)) {
                         String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);
 
-                        newRulesList.add(newRule);                        
-                    }   
-                    else{
+                        newRulesList.add(newRule);
+                    } else {
                         List<String> terminalsToCreate = GetTerminalsToCreate(lowercasePart, variableRulesListAux);
 
                         for (String terminalToCreate : terminalsToCreate) {
@@ -515,15 +524,15 @@ public class GrammarConversor {
                             String newVariable1 = availableVariables.get(0);
                             availableVariables.remove(newVariable1);
                             newlyAddedVariables.add(newVariable1);
-                            
+
                             VariableRules newVariableRule1 = new VariableRules(newVariable1, terminalToCreate);
                             variableRulesListAux.add(newVariableRule1);
-                        }                                                                                                                     
-                       
+                        }
+
                         String newRule = addVariablesToRule(lowercasePart, variableRulesListAux, rule);
 
-                        newRulesList.add(newRule);         
-                    }                 
+                        newRulesList.add(newRule);
+                    }
 
                     newRulesList.remove(rule);
                 }
@@ -535,14 +544,14 @@ public class GrammarConversor {
         return variableRulesListAux;
     }
 
-    private List<String> GetTerminalsToCreate(String lowerCasePart,  List<VariableRules> variablesRulesList) {
+    private List<String> GetTerminalsToCreate(String lowerCasePart, List<VariableRules> variablesRulesList) {
         List<String> lowerCaseChar = Arrays.asList(lowerCasePart.split(""));
         List<String> lowerCaseCharAux = new ArrayList<>(lowerCaseChar);
 
         for (String lowerCase : lowerCaseChar) {
             for (VariableRules variableRule : variablesRulesList) {
                 for (String rule : variableRule.substitutionRules) {
-                    if(lowerCase.equals(rule)){
+                    if (lowerCase.equals(rule)) {
                         lowerCaseCharAux.remove(lowerCase);
                     }
                 }
@@ -554,11 +563,11 @@ public class GrammarConversor {
 
     private String addVariablesToRule(String lowerCasePart, List<VariableRules> variablesRulesList, String actualRule) {
         List<String> newRuleList = Arrays.asList(lowerCasePart.split(""));
-        
+
         for (String lowerCaseString : newRuleList) {
             for (VariableRules variableRule : variablesRulesList) {
-                for (String rule : variableRule.substitutionRules) {                
-                    if(rule.equals(lowerCaseString)){
+                for (String rule : variableRule.substitutionRules) {
+                    if (rule.equals(lowerCaseString)) {
                         actualRule = actualRule.replace(lowerCaseString, variableRule.variable);
                     }
                 }
@@ -573,7 +582,7 @@ public class GrammarConversor {
 
         for (int i = 0; i < rule.length(); i++) {
             char character = rule.charAt(i);
-            if (Character.isLowerCase(character) || Character.isDigit(character)) {
+            if (!Character.isUpperCase(character)) {
                 lowercasePart.append(character);
             }
         }
@@ -586,7 +595,7 @@ public class GrammarConversor {
 
         for (int i = 0; i < rule.length(); i++) {
             char character = rule.charAt(i);
-            if (Character.isUpperCase(character) || Character.isDigit(character)) {
+            if (Character.isUpperCase(character)) {
                 uppercasePart.append(character);
             }
         }
